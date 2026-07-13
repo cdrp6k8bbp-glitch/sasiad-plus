@@ -1,12 +1,8 @@
-export default function Uslugi() {
-  const services = [
-    "🐕 Wyprowadzanie psów",
-    "🐈 Opieka nad zwierzętami",
-    "🏠 Pomoc podczas urlopu",
-    "🔨 Drobne remonty",
-    "🌱 Prace ogrodowe",
-    "👴 Pomoc seniorom",
-  ];
+import ListingCard from "@/components/ListingCard";
+import { getListings } from "@/lib/db";
+
+export default async function Uslugi() {
+  const listings = await getListings(["usluga", "pomoc"]);
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
@@ -19,31 +15,24 @@ export default function Uslugi() {
         Znajdź osobę, która pomoże Ci w codziennych sprawach.
       </p>
 
-
-      <div className="mt-10 grid gap-6 md:grid-cols-3">
-
-        {services.map((service) => (
-          <div
-            key={service}
-            className="rounded-2xl bg-white p-6 shadow"
-          >
-
-            <h2 className="text-xl font-bold">
-              {service}
-            </h2>
-
-            <p className="mt-3 text-gray-600">
-              Dostępni sąsiedzi w Twojej okolicy.
-            </p>
-
-            <button className="mt-4 rounded-xl bg-green-600 px-4 py-2 text-white">
-              Sprawdź
-            </button>
-
-          </div>
-        ))}
-
-      </div>
+      {listings.length === 0 ? (
+        <p className="mt-10 text-gray-500">
+          Brak ogłoszeń w tej kategorii. Bądź pierwszą osobą, która coś doda!
+        </p>
+      ) : (
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {listings.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              id={listing.id}
+              icon={listing.icon}
+              title={listing.title}
+              place={listing.location}
+              price={listing.price}
+            />
+          ))}
+        </div>
+      )}
 
     </main>
   );

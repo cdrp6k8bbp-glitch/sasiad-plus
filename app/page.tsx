@@ -262,6 +262,7 @@ export default async function Home({
             {listings.map((listing) => (
               <ListingCard
                 key={listing.id}
+                id={listing.id}
                 icon={listing.icon}
                 title={listing.title}
                 place={listing.location}

@@ -1,3 +1,5 @@
+import { addListing } from "./actions";
+
 export default function Dodaj() {
   return (
     <main className="min-h-screen bg-slate-50 p-8">
@@ -11,29 +13,31 @@ export default function Dodaj() {
       </p>
 
 
-      <form className="mt-10 max-w-xl space-y-5 rounded-2xl bg-white p-8 shadow">
+      <form action={addListing} className="mt-10 max-w-xl space-y-5 rounded-2xl bg-white p-8 shadow">
 
         <input
+          name="title"
+          required
           className="w-full rounded-xl border p-3"
           placeholder="Tytuł ogłoszenia"
         />
 
 
-        <select className="w-full rounded-xl border p-3">
+        <select name="category" required defaultValue="" className="w-full rounded-xl border p-3">
 
-          <option>
+          <option value="" disabled>
             Wybierz kategorię
           </option>
 
-          <option>
+          <option value="sprzet">
             Sprzęt
           </option>
 
-          <option>
+          <option value="usluga">
             Usługa
           </option>
 
-          <option>
+          <option value="pomoc">
             Pomoc sąsiedzka
           </option>
 
@@ -41,6 +45,7 @@ export default function Dodaj() {
 
 
         <textarea
+          name="description"
           className="w-full rounded-xl border p-3"
           placeholder="Opis"
           rows={5}
@@ -48,18 +53,23 @@ export default function Dodaj() {
 
 
         <input
+          name="price"
+          required
           className="w-full rounded-xl border p-3"
           placeholder="Cena (np. 20 zł/dzień)"
         />
 
 
         <input
+          name="location"
+          required
           className="w-full rounded-xl border p-3"
           placeholder="Miasto"
         />
 
 
         <button
+          type="submit"
           className="rounded-xl bg-green-600 px-6 py-3 text-white"
         >
           Opublikuj ogłoszenie

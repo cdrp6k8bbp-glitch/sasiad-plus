@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 type ListingProps = {
+  id: number;
   icon: string;
   title: string;
   place: string;
@@ -6,6 +9,7 @@ type ListingProps = {
 };
 
 export default function ListingCard({
+  id,
   icon,
   title,
   place,
@@ -33,7 +37,7 @@ export default function ListingCard({
 
       <div className="p-5">
         <p className="text-sm font-semibold text-green-700">
-          Zaufany Sąsiad
+          Nowy Sąsiad
         </p>
 
         <h3 className="mt-2 text-xl font-black tracking-tight">
@@ -52,9 +56,12 @@ export default function ListingCard({
             </p>
           </div>
 
-          <span className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-green-700">
+          <Link
+            href={`/ogloszenie/${id}`}
+            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-green-700"
+          >
             Zobacz
-          </span>
+          </Link>
         </div>
       </div>
     </article>

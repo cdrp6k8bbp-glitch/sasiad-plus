@@ -1,12 +1,8 @@
-export default function Sprzet() {
-  const items = [
-    "Wiertarki",
-    "Młoty udarowe",
-    "Drabiny",
-    "Myjki ciśnieniowe",
-    "Kosiarki",
-    "Narzędzia ogrodowe",
-  ];
+import ListingCard from "@/components/ListingCard";
+import { getListings } from "@/lib/db";
+
+export default async function Sprzet() {
+  const listings = await getListings("sprzet");
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
@@ -19,29 +15,24 @@ export default function Sprzet() {
         Znajdź narzędzia w swojej okolicy.
       </p>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-3">
-
-        {items.map((item) => (
-          <div
-            key={item}
-            className="rounded-2xl bg-white p-6 shadow"
-          >
-            <h2 className="text-xl font-bold">
-              {item}
-            </h2>
-
-            <p className="mt-2">
-              Dostępne w okolicy
-            </p>
-
-            <button className="mt-4 rounded-xl bg-green-600 px-4 py-2 text-white">
-              Zobacz oferty
-            </button>
-
-          </div>
-        ))}
-
-      </div>
+      {listings.length === 0 ? (
+        <p className="mt-10 text-gray-500">
+          Brak ogłoszeń w tej kategorii. Bądź pierwszą osobą, która coś doda!
+        </p>
+      ) : (
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {listings.map((listing) => (
+            <ListingCard
+  key={listing.id}
+  id={listing.id}
+  icon={listing.icon}
+  title={listing.title}
+  place={listing.location}
+  price={listing.price}
+/>
+          ))}
+        </div>
+      )}
 
     </main>
   );
