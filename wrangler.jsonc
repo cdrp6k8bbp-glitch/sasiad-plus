@@ -1,32 +1,38 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
-  "name": "sasiad-plus",
-  "compatibility_date": "2026-07-13",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "sasiad-plus"
-    }
-  ],
-  "images": {
-    "binding": "IMAGES"
-  },
-  "observability": {
-    "enabled": true
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "sasiad-plus-db",
-      "database_id": "381b1c21-45f9-4e3a-b990-c31ed5242c97"
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "sasiad-plus",
+	"compatibility_date": "2026-07-13",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "sasiad-plus"
+		}
+	],
+	"images": {
+		"binding": "IMAGES"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "sasiad-plus-db",
+			"database_id": "381b1c21-45f9-4e3a-b990-c31ed5242c97"
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "sasiad-plus-images",
+			"binding": "sasiad_plus_images"
+		}
+	]
 }
