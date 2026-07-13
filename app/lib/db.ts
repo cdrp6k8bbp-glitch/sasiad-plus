@@ -33,7 +33,7 @@ export async function getListings(
     return result.results;
   }
 
-  if (typeof category === "string" && category.length > 0) {
+  if (typeof category === "string" && category) {
     const result = await env.DB.prepare(
       `SELECT id, title, category, description, price, location, icon, created_at
        FROM listings
