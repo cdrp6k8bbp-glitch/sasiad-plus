@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import OwnerSummary from "@/components/OwnerSummary";
 
 type Listing = {
   id: number;
@@ -125,20 +126,7 @@ export default async function ListingPage({
               </button>
 
               <div className="mt-6 border-t border-slate-200 pt-6">
-                <p className="text-sm text-slate-500">Wystawiający</p>
-
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-xl">
-                    👤
-                  </div>
-
-                  <div>
-                    <p className="font-bold">Użytkownik Sąsiad+</p>
-                    <p className="text-sm font-semibold text-green-700">
-                      🟢 Nowy Sąsiad
-                    </p>
-                  </div>
-                </div>
+                <OwnerSummary />
               </div>
             </div>
           </aside>

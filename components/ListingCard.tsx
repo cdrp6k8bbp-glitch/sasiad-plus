@@ -1,4 +1,5 @@
 import Link from "next/link";
+import OwnerSummary from "@/components/OwnerSummary";
 
 type ListingProps = {
   id: number;
@@ -36,24 +37,14 @@ export default function ListingCard({
       </div>
 
       <div className="p-5">
-        <p className="text-sm font-semibold text-green-700">
-          Nowy Sąsiad
-        </p>
+        <h3 className="text-xl font-black tracking-tight">{title}</h3>
 
-        <h3 className="mt-2 text-xl font-black tracking-tight">
-          {title}
-        </h3>
-
-        <p className="mt-2 text-sm text-slate-500">
-          📍 {place}
-        </p>
+        <p className="mt-2 text-sm text-slate-500">📍 {place}</p>
 
         <div className="mt-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-xs text-slate-500">Cena</p>
-            <p className="text-lg font-black text-green-700">
-              {price}
-            </p>
+            <p className="text-lg font-black text-green-700">{price}</p>
           </div>
 
           <Link
@@ -63,6 +54,8 @@ export default function ListingCard({
             Zobacz
           </Link>
         </div>
+
+        <OwnerSummary compact />
       </div>
     </article>
   );
