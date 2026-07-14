@@ -48,13 +48,24 @@ export default function ImageUploader() {
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
-    validateAndSetFile(event.dataTransfer.files?.[0]);
+
+    const droppedFile = event.dataTransfer.files?.[0];
+    validateAndSetFile(droppedFile);
+
+    if (inputRef.current && droppedFile) {
+      const transfer = new DataTransfer();
+      transfer.items.add(droppedFile);
+      inputRef.current.files = transfer.files;
+    }
   }
 
   function removeFile() {
     setFile(null);
     setError(null);
-    if (inputRef.current) inputRef.current.value = "";
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   }
 
   return (
@@ -82,7 +93,9 @@ export default function ImageUploader() {
 
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="truncate font-semibold text-slate-800">{file.name}</p>
+              <p className="truncate font-semibold text-slate-800">
+                {file.name}
+              </p>
               <p className="text-sm text-slate-500">
                 {(file.size / 1024 / 1024).toFixed(2)} MB
               </p>
@@ -132,7 +145,9 @@ export default function ImageUploader() {
           }`}
         >
           <div className="text-5xl">📷</div>
-          <p className="mt-4 text-lg font-black text-slate-900">Dodaj zdjęcie</p>
+          <p className="mt-4 text-lg font-black text-slate-900">
+            Dodaj zdjęcie
+          </p>
           <p className="mt-2 text-sm text-slate-600">
             Kliknij albo przeciągnij zdjęcie tutaj
           </p>
@@ -149,7 +164,7 @@ export default function ImageUploader() {
       )}
 
       <p className="mt-3 text-sm text-slate-500">
-        Na tym etapie zdjęcie służy tylko do podglądu. Zapis do R2 dodamy w następnym sprincie.
+        Zdjęcie zostanie zapisane razem z ogłoszeniem.
       </p>
     </div>
   );
