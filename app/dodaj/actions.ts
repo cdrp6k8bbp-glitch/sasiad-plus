@@ -1,34 +1,60 @@
 "use server";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 const CATEGORY_ICONS: Record<string, string> = {
-  sprzet: "🔧",
-  usluga: "🧰",
+  sprzet: "🛠️",
+  usluga: "🤝",
   pomoc: "🤝",
+  zwierzeta: "🐕",
+  dzieci: "👶",
+  turystyka: "🏕️",
+  ogrod: "🌿",
+  dom: "🏠",
 };
 
-export async function addListing(formData: FormData) {
-  const title = formData.get("title")?.toString().trim();
-  const category = formData.get("category")?.toString();
-  const description = formData.get("description")?.toString().trim();
-  const price = formData.get("price")?.toString().trim();
-  const location = formData.get("location")?.toString().trim();
+function readRequiredText(formData: FormData, field: string): string {
+  const value = formData.get(field);
 
-  if (!title || !category || !price || !location) {
-    throw new Error("Wypełnij wszystkie wymagane pola.");
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Brak wymaganego pola: ${field}`);
   }
 
-  const { env } = getCloudflareContext();
+  return value.trim();
+}
+
+export async function addListing(formData: FormData): Promise<void> {
+  const title = readRequiredText(formData, "title");
+  const category = readRequiredText(formData, "category");
+  const price = readRequiredText(formData, "price");
+  const location = readRequiredText(formData, "location");
+
+  const descriptionValue = formData.get("description");
+  const description =
+    typeof descriptionValue === "string" ? descriptionValue.trim() : "";
+
   const icon = CATEGORY_ICONS[category] ?? "📦";
 
+  const { env } = await getCloudflareContext({ async: true });
+
   await env.DB.prepare(
-    `INSERT INTO listings (title, category, description, price, location, icon)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO listings (
+      title,
+      category,
+      description,
+      price,
+      location,
+      icon
+    ) VALUES (?, ?, ?, ?, ?, ?)`,
   )
-    .bind(title, category, description ?? "", price, location, icon)
+    .bind(title, category, description, price, location, icon)
     .run();
+
+  revalidatePath("/");
+  revalidatePath("/sprzet");
+  revalidatePath("/uslugi");
 
   redirect("/?dodano=1");
 }
