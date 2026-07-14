@@ -1,9 +1,16 @@
-import type { NextConfig } from "next";
+import { betterAuth } from "better-auth";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
+export const auth = betterAuth({
+  database: {
+    provider: "sqlite",
+    url: "file:./better-auth-cli.sqlite",
+  },
 
-export default nextConfig;
+  emailAndPassword: {
+    enabled: true,
+  },
 
-import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());
+  secret:
+    process.env.BETTER_AUTH_SECRET ??
+    "tymczasowy-sekret-wylacznie-do-generowania-schematu",
+});
