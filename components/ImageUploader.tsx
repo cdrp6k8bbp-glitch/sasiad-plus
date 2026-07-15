@@ -1,16 +1,30 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  DragEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+type UploadResponse = {
+  imageKey?: string;
+  error?: string;
+};
+
 export default function ImageUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
+
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageKey, setImageKey] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!file) {
@@ -24,7 +38,41 @@ export default function ImageUploader() {
     return () => URL.revokeObjectURL(nextPreviewUrl);
   }, [file]);
 
-  function validateAndSetFile(nextFile: File | undefined) {
+  async function uploadFile(nextFile: File) {
+    setIsUploading(true);
+    setError(null);
+    setImageKey("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", nextFile);
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = (await response.json()) as UploadResponse;
+
+      if (!response.ok || !result.imageKey) {
+        throw new Error(result.error ?? "Nie udało się wysłać zdjęcia.");
+      }
+
+      setImageKey(result.imageKey);
+    } catch (uploadError) {
+      setFile(null);
+
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Nie udało się wysłać zdjęcia.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function validateAndSetFile(nextFile: File | undefined) {
     if (!nextFile) return;
 
     if (!ACCEPTED_TYPES.includes(nextFile.type)) {
@@ -39,28 +87,24 @@ export default function ImageUploader() {
 
     setError(null);
     setFile(nextFile);
+
+    await uploadFile(nextFile);
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    validateAndSetFile(event.target.files?.[0]);
+    void validateAndSetFile(event.target.files?.[0]);
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
 
-    const droppedFile = event.dataTransfer.files?.[0];
-    validateAndSetFile(droppedFile);
-
-    if (inputRef.current && droppedFile) {
-      const transfer = new DataTransfer();
-      transfer.items.add(droppedFile);
-      inputRef.current.files = transfer.files;
-    }
+    void validateAndSetFile(event.dataTransfer.files?.[0]);
   }
 
   function removeFile() {
     setFile(null);
+    setImageKey("");
     setError(null);
 
     if (inputRef.current) {
@@ -77,11 +121,12 @@ export default function ImageUploader() {
       <input
         ref={inputRef}
         type="file"
-        name="image"
         accept="image/jpeg,image/png,image/webp"
         onChange={handleInputChange}
         className="sr-only"
       />
+
+      <input type="hidden" name="image_key" value={imageKey} />
 
       {previewUrl && file ? (
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
@@ -96,24 +141,39 @@ export default function ImageUploader() {
               <p className="truncate font-semibold text-slate-800">
                 {file.name}
               </p>
+
               <p className="text-sm text-slate-500">
                 {(file.size / 1024 / 1024).toFixed(2)} MB
               </p>
+
+              {isUploading && (
+                <p className="mt-1 text-sm font-semibold text-blue-600">
+                  Wysyłanie zdjęcia…
+                </p>
+              )}
+
+              {!isUploading && imageKey && (
+                <p className="mt-1 text-sm font-semibold text-green-700">
+                  ✓ Zdjęcie wysłane
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2">
               <button
                 type="button"
+                disabled={isUploading}
                 onClick={() => inputRef.current?.click()}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Zmień
               </button>
 
               <button
                 type="button"
+                disabled={isUploading}
                 onClick={removeFile}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Usuń
               </button>
@@ -124,9 +184,16 @@ export default function ImageUploader() {
         <div
           role="button"
           tabIndex={0}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (!isUploading) {
+              inputRef.current?.click();
+            }
+          }}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
+            if (
+              !isUploading &&
+              (event.key === "Enter" || event.key === " ")
+            ) {
               event.preventDefault();
               inputRef.current?.click();
             }
@@ -145,12 +212,15 @@ export default function ImageUploader() {
           }`}
         >
           <div className="text-5xl">📷</div>
+
           <p className="mt-4 text-lg font-black text-slate-900">
             Dodaj zdjęcie
           </p>
+
           <p className="mt-2 text-sm text-slate-600">
             Kliknij albo przeciągnij zdjęcie tutaj
           </p>
+
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
             JPG · PNG · WEBP · maks. 5 MB
           </p>
@@ -162,10 +232,6 @@ export default function ImageUploader() {
           {error}
         </p>
       )}
-
-      <p className="mt-3 text-sm text-slate-500">
-        Zdjęcie zostanie zapisane razem z ogłoszeniem.
-      </p>
     </div>
   );
 }

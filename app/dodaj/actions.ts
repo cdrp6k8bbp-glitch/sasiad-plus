@@ -9,13 +9,6 @@ import {
   isValidSubcategory,
 } from "@/lib/categories";
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
-
 function readRequiredText(formData: FormData, field: string): string {
   const value = formData.get(field);
 
@@ -26,65 +19,39 @@ function readRequiredText(formData: FormData, field: string): string {
   return value.trim();
 }
 
-function getFileExtension(file: File): string {
-  if (file.type === "image/jpeg") return "jpg";
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  return "bin";
-}
+function readOptionalText(formData: FormData, field: string): string | null {
+  const value = formData.get(field);
 
-async function uploadImage(formData: FormData): Promise<string | null> {
-  const image = formData.get("image");
-
-  if (!(image instanceof File) || image.size === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     return null;
   }
 
-  if (!ACCEPTED_IMAGE_TYPES.has(image.type)) {
-    throw new Error("Obsługiwane są tylko obrazy JPG, PNG i WEBP.");
-  }
-
-  if (image.size > MAX_IMAGE_SIZE) {
-    throw new Error("Plik jest zbyt duży. Maksymalny rozmiar to 5 MB.");
-  }
-
-  const { env } = await getCloudflareContext({ async: true });
-  const imageKey = `listings/${crypto.randomUUID()}.${getFileExtension(image)}`;
-  const imageBuffer = await image.arrayBuffer();
-
-  await env.sasiad_plus_images.put(imageKey, imageBuffer, {
-    httpMetadata: {
-      contentType: image.type,
-    },
-    customMetadata: {
-      originalName: image.name.slice(0, 200),
-    },
-  });
-
-  return imageKey;
+  return value.trim();
 }
 
 export async function addListing(formData: FormData): Promise<void> {
   const title = readRequiredText(formData, "title");
-  const categoryValue = readRequiredText(formData, "category");
+  const category = readRequiredText(formData, "category");
   const subcategory = readRequiredText(formData, "subcategory");
   const price = readRequiredText(formData, "price");
   const location = readRequiredText(formData, "location");
 
-  if (!isCategoryKey(categoryValue)) {
+  const description = readOptionalText(formData, "description") ?? "";
+  const imageKey = readOptionalText(formData, "image_key");
+
+  if (!isCategoryKey(category)) {
     throw new Error("Wybrana kategoria jest nieprawidłowa.");
   }
 
-  if (!isValidSubcategory(categoryValue, subcategory)) {
+  if (!isValidSubcategory(category, subcategory)) {
     throw new Error("Podkategoria nie pasuje do wybranej kategorii.");
   }
 
-  const descriptionValue = formData.get("description");
-  const description =
-    typeof descriptionValue === "string" ? descriptionValue.trim() : "";
+  if (imageKey && !imageKey.startsWith("listings/")) {
+    throw new Error("Nieprawidłowy klucz zdjęcia.");
+  }
 
-  const icon = CATEGORIES[categoryValue].icon;
-  const imageKey = await uploadImage(formData);
+  const icon = CATEGORIES[category].icon;
   const { env } = await getCloudflareContext({ async: true });
 
   try {
@@ -102,7 +69,7 @@ export async function addListing(formData: FormData): Promise<void> {
     )
       .bind(
         title,
-        categoryValue,
+        category,
         subcategory,
         description,
         price,
