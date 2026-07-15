@@ -3,6 +3,11 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  CATEGORIES,
+  isCategoryKey,
+  isValidSubcategory,
+} from "@/lib/categories";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set([
@@ -10,17 +15,6 @@ const ACCEPTED_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
-
-const CATEGORY_ICONS: Record<string, string> = {
-  sprzet: "🛠️",
-  usluga: "🤝",
-  pomoc: "🤝",
-  zwierzeta: "🐕",
-  dzieci: "👶",
-  turystyka: "🏕️",
-  ogrod: "🌿",
-  dom: "🏠",
-};
 
 function readRequiredText(formData: FormData, field: string): string {
   const value = formData.get(field);
@@ -56,8 +50,9 @@ async function uploadImage(formData: FormData): Promise<string | null> {
 
   const { env } = await getCloudflareContext({ async: true });
   const imageKey = `listings/${crypto.randomUUID()}.${getFileExtension(image)}`;
+  const imageBuffer = await image.arrayBuffer();
 
-  await env.sasiad_plus_images.put(imageKey, image.stream(), {
+  await env.sasiad_plus_images.put(imageKey, imageBuffer, {
     httpMetadata: {
       contentType: image.type,
     },
@@ -71,17 +66,25 @@ async function uploadImage(formData: FormData): Promise<string | null> {
 
 export async function addListing(formData: FormData): Promise<void> {
   const title = readRequiredText(formData, "title");
-  const category = readRequiredText(formData, "category");
+  const categoryValue = readRequiredText(formData, "category");
+  const subcategory = readRequiredText(formData, "subcategory");
   const price = readRequiredText(formData, "price");
   const location = readRequiredText(formData, "location");
+
+  if (!isCategoryKey(categoryValue)) {
+    throw new Error("Wybrana kategoria jest nieprawidłowa.");
+  }
+
+  if (!isValidSubcategory(categoryValue, subcategory)) {
+    throw new Error("Podkategoria nie pasuje do wybranej kategorii.");
+  }
 
   const descriptionValue = formData.get("description");
   const description =
     typeof descriptionValue === "string" ? descriptionValue.trim() : "";
 
-  const icon = CATEGORY_ICONS[category] ?? "📦";
+  const icon = CATEGORIES[categoryValue].icon;
   const imageKey = await uploadImage(formData);
-
   const { env } = await getCloudflareContext({ async: true });
 
   try {
@@ -89,14 +92,24 @@ export async function addListing(formData: FormData): Promise<void> {
       `INSERT INTO listings (
         title,
         category,
+        subcategory,
         description,
         price,
         location,
         icon,
         image_key
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-      .bind(title, category, description, price, location, icon, imageKey)
+      .bind(
+        title,
+        categoryValue,
+        subcategory,
+        description,
+        price,
+        location,
+        icon,
+        imageKey,
+      )
       .run();
   } catch (error) {
     if (imageKey) {
