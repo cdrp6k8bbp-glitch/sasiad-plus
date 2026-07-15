@@ -311,6 +311,8 @@ export default async function Home({
                 key={listing.id}
                 id={listing.id}
                 icon={listing.icon}
+                imageKey={listing.image_key}
+                subcategory={listing.subcategory}
                 title={listing.title}
                 place={listing.location}
                 price={listing.price}
@@ -358,6 +360,12 @@ export default async function Home({
           <div className="flex gap-5">
             <Link href="/sprzet">Sprzęt</Link>
             <Link href="/uslugi">Pomoc</Link>
+            <Link
+  href="/profil"
+  className="transition hover:text-green-700"
+>
+  Profil
+</Link>
             <Link href="/dodaj">Dodaj ogłoszenie</Link>
           </div>
         </div>

@@ -4,12 +4,27 @@ export type Listing = {
   id: number;
   title: string;
   category: string;
+  subcategory: string | null;
   description: string;
   price: string;
   location: string;
   icon: string;
+  image_key: string | null;
   created_at: string;
 };
+
+const LISTING_COLUMNS = `
+  id,
+  title,
+  category,
+  subcategory,
+  description,
+  price,
+  location,
+  icon,
+  image_key,
+  created_at
+`;
 
 export async function getListings(
   category?: string | string[],
@@ -21,7 +36,7 @@ export async function getListings(
     const placeholders = category.map(() => "?").join(", ");
 
     const result = await env.DB.prepare(
-      `SELECT id, title, category, description, price, location, icon, created_at
+      `SELECT ${LISTING_COLUMNS}
        FROM listings
        WHERE category IN (${placeholders})
        ORDER BY created_at DESC
@@ -35,7 +50,7 @@ export async function getListings(
 
   if (typeof category === "string" && category.length > 0) {
     const result = await env.DB.prepare(
-      `SELECT id, title, category, description, price, location, icon, created_at
+      `SELECT ${LISTING_COLUMNS}
        FROM listings
        WHERE category = ?
        ORDER BY created_at DESC
@@ -48,7 +63,7 @@ export async function getListings(
   }
 
   const result = await env.DB.prepare(
-    `SELECT id, title, category, description, price, location, icon, created_at
+    `SELECT ${LISTING_COLUMNS}
      FROM listings
      ORDER BY created_at DESC
      LIMIT ?`,
@@ -59,13 +74,11 @@ export async function getListings(
   return result.results;
 }
 
-export async function getListingById(
-  id: number,
-): Promise<Listing | null> {
+export async function getListingById(id: number): Promise<Listing | null> {
   const { env } = await getCloudflareContext({ async: true });
 
   const listing = await env.DB.prepare(
-    `SELECT id, title, category, description, price, location, icon, created_at
+    `SELECT ${LISTING_COLUMNS}
      FROM listings
      WHERE id = ?
      LIMIT 1`,

@@ -26,6 +26,8 @@ export default async function Sprzet() {
   key={listing.id}
   id={listing.id}
   icon={listing.icon}
+  imageKey={listing.image_key}
+  subcategory={listing.subcategory}
   title={listing.title}
   place={listing.location}
   price={listing.price}
