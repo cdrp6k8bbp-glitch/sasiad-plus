@@ -1,0 +1,2 @@
+ALTER TABLE listings
+ADD COLUMN image_keys TEXT;
