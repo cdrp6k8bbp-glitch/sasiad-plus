@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       },
       customMetadata: {
         originalName: image.name.slice(0, 200),
+        ownerId: session.user.id,
       },
     });
 
@@ -76,6 +77,39 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       { error: "Nie udało się wysłać zdjęcia." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await auth.api.getSession({ headers: request.headers });
+
+    if (!session) {
+      return NextResponse.json({ error: "Brak dostępu." }, { status: 401 });
+    }
+
+    const body = (await request.json()) as { imageKey?: unknown };
+    const imageKey = body.imageKey;
+
+    if (typeof imageKey !== "string" || !imageKey.startsWith("listings/")) {
+      return NextResponse.json({ error: "Nieprawidłowe zdjęcie." }, { status: 400 });
+    }
+
+    const { env } = await getCloudflareContext({ async: true });
+    const image = await env.sasiad_plus_images.head(imageKey);
+
+    if (!image || image.customMetadata?.ownerId !== session.user.id) {
+      return NextResponse.json({ error: "Brak dostępu." }, { status: 403 });
+    }
+
+    await env.sasiad_plus_images.delete(imageKey);
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    console.error("Błąd usuwania zdjęcia:", error);
+    return NextResponse.json(
+      { error: "Nie udało się usunąć zdjęcia." },
       { status: 500 },
     );
   }

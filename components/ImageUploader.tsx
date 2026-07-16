@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  ChangeEvent,
-  DragEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGES = 5;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type UploadResponse = {
@@ -16,183 +11,181 @@ type UploadResponse = {
   error?: string;
 };
 
+type UploadItem = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  imageKey: string;
+  status: "uploading" | "ready" | "error";
+  error?: string;
+};
+
 export default function ImageUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [imageKey, setImageKey] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState<UploadItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+
+  const readyImageKeys = items
+    .filter((item) => item.status === "ready" && item.imageKey)
+    .map((item) => item.imageKey);
+  const isUploading = items.some((item) => item.status === "uploading");
 
   useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
+    const form = containerRef.current?.closest("form");
+    if (!form || !isUploading) return;
 
-  async function uploadFile(nextFile: File) {
-    setIsUploading(true);
-    setError(null);
-    setImageKey("");
+    function preventSubmit(event: SubmitEvent) {
+      event.preventDefault();
+      setError("Poczekaj, aż wszystkie zdjęcia zostaną wysłane.");
+    }
 
+    form.addEventListener("submit", preventSubmit);
+    return () => form.removeEventListener("submit", preventSubmit);
+  }, [isUploading]);
+
+  async function uploadFile(item: UploadItem) {
     try {
       const formData = new FormData();
-      formData.append("image", nextFile);
+      formData.append("image", item.file);
 
       const response = await fetch("/api/upload-image", {
         method: "POST",
         body: formData,
       });
-
       const result = (await response.json()) as UploadResponse;
 
       if (!response.ok || !result.imageKey) {
         throw new Error(result.error ?? "Nie udało się wysłać zdjęcia.");
       }
 
-      setImageKey(result.imageKey);
-    } catch (uploadError) {
-      setFile(null);
-      setPreviewUrl(null);
-
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Nie udało się wysłać zdjęcia.",
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id
+            ? { ...currentItem, imageKey: result.imageKey!, status: "ready" }
+            : currentItem,
+        ),
       );
-    } finally {
-      setIsUploading(false);
+    } catch (uploadError) {
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id
+            ? {
+                ...currentItem,
+                status: "error",
+                error:
+                  uploadError instanceof Error
+                    ? uploadError.message
+                    : "Nie udało się wysłać zdjęcia.",
+              }
+            : currentItem,
+        ),
+      );
     }
   }
 
-  async function validateAndSetFile(nextFile: File | undefined) {
-    if (!nextFile) return;
-
-    if (!ACCEPTED_TYPES.includes(nextFile.type)) {
-      setError("Obsługiwane są tylko obrazy JPG, PNG i WEBP.");
-      return;
-    }
-
-    if (nextFile.size > MAX_FILE_SIZE) {
-      setError("Plik jest zbyt duży. Maksymalny rozmiar to 5 MB.");
-      return;
-    }
-
+  function addFiles(selectedFiles: File[]) {
     setError(null);
-    setFile(nextFile);
-    setPreviewUrl(URL.createObjectURL(nextFile));
 
-    await uploadFile(nextFile);
+    const availableSlots = MAX_IMAGES - items.length;
+    if (availableSlots <= 0) {
+      setError(`Możesz dodać maksymalnie ${MAX_IMAGES} zdjęć.`);
+      return;
+    }
+
+    const filesToAdd = selectedFiles.slice(0, availableSlots);
+    if (selectedFiles.length > availableSlots) {
+      setError(`Wybrano za dużo plików. Limit to ${MAX_IMAGES} zdjęć.`);
+    }
+
+    const validItems: UploadItem[] = [];
+
+    for (const file of filesToAdd) {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setError("Pominięto plik w nieobsługiwanym formacie. Użyj JPG, PNG lub WEBP.");
+        continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        setError("Pominięto plik większy niż 5 MB.");
+        continue;
+      }
+
+      validItems.push({
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        imageKey: "",
+        status: "uploading",
+      });
+    }
+
+    if (validItems.length === 0) return;
+
+    setItems((current) => [...current, ...validItems]);
+    validItems.forEach((item) => void uploadFile(item));
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    void validateAndSetFile(event.target.files?.[0]);
+    addFiles(Array.from(event.target.files ?? []));
+    event.target.value = "";
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
-
-    void validateAndSetFile(event.dataTransfer.files?.[0]);
+    addFiles(Array.from(event.dataTransfer.files));
   }
 
-  function removeFile() {
-    setFile(null);
-    setPreviewUrl(null);
-    setImageKey("");
+  async function removeItem(item: UploadItem) {
+    if (item.status === "uploading") return;
+
+    setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
+    URL.revokeObjectURL(item.previewUrl);
     setError(null);
 
-    if (inputRef.current) {
-      inputRef.current.value = "";
+    if (item.imageKey) {
+      try {
+        await fetch("/api/upload-image", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageKey: item.imageKey }),
+        });
+      } catch {
+        // Usunięcie podglądu nie powinno blokować dalszej pracy formularza.
+      }
     }
   }
 
   return (
-    <div>
-      <label className="mb-2 block text-sm font-bold text-slate-700">
-        Zdjęcie ogłoszenia
-      </label>
+    <div ref={containerRef}>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <label className="block text-sm font-bold text-slate-700">
+          Zdjęcia ogłoszenia
+        </label>
+        <span className="text-xs font-semibold text-slate-500">
+          {items.length}/{MAX_IMAGES}
+        </span>
+      </div>
 
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept="image/jpeg,image/png,image/webp"
         onChange={handleInputChange}
         className="sr-only"
       />
+      <input type="hidden" name="image_keys" value={JSON.stringify(readyImageKeys)} />
 
-      <input type="hidden" name="image_key" value={imageKey} />
-
-      {previewUrl && file ? (
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-          <img
-            src={previewUrl}
-            alt="Podgląd wybranego zdjęcia"
-            className="aspect-[16/10] w-full object-cover"
-          />
-
-          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-slate-800">
-                {file.name}
-              </p>
-
-              <p className="text-sm text-slate-500">
-                {(file.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-
-              {isUploading && (
-                <p className="mt-1 text-sm font-semibold text-blue-600">
-                  Wysyłanie zdjęcia…
-                </p>
-              )}
-
-              {!isUploading && imageKey && (
-                <p className="mt-1 text-sm font-semibold text-green-700">
-                  ✓ Zdjęcie wysłane
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={() => inputRef.current?.click()}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Zmień
-              </button>
-
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={removeFile}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Usuń
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
+      {items.length < MAX_IMAGES && (
         <div
           role="button"
           tabIndex={0}
-          onClick={() => {
-            if (!isUploading) {
-              inputRef.current?.click();
-            }
-          }}
+          onClick={() => inputRef.current?.click()}
           onKeyDown={(event) => {
-            if (
-              !isUploading &&
-              (event.key === "Enter" || event.key === " ")
-            ) {
+            if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
               inputRef.current?.click();
             }
@@ -204,28 +197,78 @@ export default function ImageUploader() {
           onDragOver={(event) => event.preventDefault()}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
-          className={`cursor-pointer rounded-3xl border-2 border-dashed p-8 text-center transition ${
+          className={`cursor-pointer rounded-3xl border-2 border-dashed p-6 text-center transition ${
             isDragging
               ? "border-green-600 bg-green-50"
               : "border-slate-300 bg-slate-50 hover:border-green-500 hover:bg-green-50/50"
           }`}
         >
-          <div className="text-5xl">📷</div>
-
-          <p className="mt-4 text-lg font-black text-slate-900">
-            Dodaj zdjęcie
+          <div className="text-4xl">📷</div>
+          <p className="mt-3 font-black text-slate-900">
+            {items.length === 0 ? "Dodaj zdjęcia" : "Dodaj kolejne zdjęcia"}
           </p>
-
-          <p className="mt-2 text-sm text-slate-600">
-            Kliknij albo przeciągnij zdjęcie tutaj
+          <p className="mt-1 text-sm text-slate-600">
+            Wybierz kilka plików albo przeciągnij je tutaj
           </p>
-
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            JPG · PNG · WEBP · maks. 5 MB
+          <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            JPG · PNG · WEBP · maks. 5 MB każde
           </p>
         </div>
       )}
 
+      {items.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+            >
+              <div className="relative aspect-square">
+                <img
+                  src={item.previewUrl}
+                  alt={`Podgląd zdjęcia ${index + 1}`}
+                  className="h-full w-full object-cover"
+                />
+                {index === 0 && (
+                  <span className="absolute left-2 top-2 rounded-full bg-slate-900/80 px-2 py-1 text-[10px] font-bold uppercase text-white">
+                    Okładka
+                  </span>
+                )}
+              </div>
+              <div className="p-3">
+                <p className="truncate text-xs font-semibold text-slate-700">
+                  {item.file.name}
+                </p>
+                {item.status === "uploading" && (
+                  <p className="mt-1 text-xs font-semibold text-blue-600">Wysyłanie…</p>
+                )}
+                {item.status === "ready" && (
+                  <p className="mt-1 text-xs font-semibold text-green-700">✓ Gotowe</p>
+                )}
+                {item.status === "error" && (
+                  <p className="mt-1 text-xs font-semibold text-red-600">
+                    {item.error ?? "Błąd wysyłania"}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={item.status === "uploading"}
+                  onClick={() => void removeItem(item)}
+                  className="mt-2 text-xs font-bold text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Usuń
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isUploading && (
+        <p className="mt-3 text-sm font-semibold text-blue-600">
+          Poczekaj na wysłanie wszystkich zdjęć przed publikacją.
+        </p>
+      )}
       {error && (
         <p role="alert" className="mt-3 text-sm font-semibold text-red-600">
           {error}

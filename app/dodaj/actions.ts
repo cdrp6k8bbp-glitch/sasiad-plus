@@ -31,6 +31,32 @@ function readOptionalText(formData: FormData, field: string): string | null {
   return value.trim();
 }
 
+function readImageKeys(formData: FormData): string[] {
+  const value = readOptionalText(formData, "image_keys");
+
+  if (!value) return [];
+
+  let imageKeys: unknown;
+  try {
+    imageKeys = JSON.parse(value);
+  } catch {
+    throw new Error("Nieprawidłowa lista zdjęć.");
+  }
+
+  if (
+    !Array.isArray(imageKeys) ||
+    imageKeys.length > 5 ||
+    imageKeys.some(
+      (imageKey) =>
+        typeof imageKey !== "string" || !imageKey.startsWith("listings/"),
+    )
+  ) {
+    throw new Error("Nieprawidłowa lista zdjęć.");
+  }
+
+  return [...new Set(imageKeys)];
+}
+
 export async function addListing(formData: FormData): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -45,7 +71,8 @@ export async function addListing(formData: FormData): Promise<void> {
   const location = readRequiredText(formData, "location");
 
   const description = readOptionalText(formData, "description") ?? "";
-  const imageKey = readOptionalText(formData, "image_key");
+  const imageKeys = readImageKeys(formData);
+  const imageKey = imageKeys[0] ?? null;
 
   if (!isCategoryKey(category)) {
     throw new Error("Wybrana kategoria jest nieprawidłowa.");
@@ -55,12 +82,24 @@ export async function addListing(formData: FormData): Promise<void> {
     throw new Error("Podkategoria nie pasuje do wybranej kategorii.");
   }
 
-  if (imageKey && !imageKey.startsWith("listings/")) {
-    throw new Error("Nieprawidłowy klucz zdjęcia.");
-  }
-
   const icon = CATEGORIES[category].icon;
   const { env } = await getCloudflareContext({ async: true });
+
+  if (imageKeys.length > 0) {
+    const uploadedImages = await Promise.all(
+      imageKeys.map((currentImageKey) =>
+        env.sasiad_plus_images.head(currentImageKey),
+      ),
+    );
+
+    if (
+      uploadedImages.some(
+        (image) => image?.customMetadata?.ownerId !== session.user.id,
+      )
+    ) {
+      throw new Error("Nie można użyć wybranego zdjęcia.");
+    }
+  }
 
   try {
     await env.DB.prepare(
@@ -73,8 +112,9 @@ export async function addListing(formData: FormData): Promise<void> {
         location,
         icon,
         image_key,
+        image_keys,
         owner_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         title,
@@ -85,12 +125,17 @@ export async function addListing(formData: FormData): Promise<void> {
         location,
         icon,
         imageKey,
+        imageKeys.length > 0 ? JSON.stringify(imageKeys) : null,
         session.user.id,
       )
       .run();
   } catch (error) {
-    if (imageKey) {
-      await env.sasiad_plus_images.delete(imageKey);
+    if (imageKeys.length > 0) {
+      await Promise.all(
+        imageKeys.map((currentImageKey) =>
+          env.sasiad_plus_images.delete(currentImageKey),
+        ),
+      );
     }
 
     throw error;

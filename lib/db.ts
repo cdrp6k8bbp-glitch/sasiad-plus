@@ -10,6 +10,7 @@ export type Listing = {
   location: string;
   icon: string;
   image_key: string | null;
+  image_keys: string | null;
   owner_id: string | null;
   owner_name: string | null;
   created_at: string;
@@ -25,6 +26,7 @@ const LISTING_COLUMNS = `
   listings.location,
   listings.icon,
   listings.image_key,
+  listings.image_keys,
   listings.owner_id,
   listings.created_at,
   "user".name AS owner_name

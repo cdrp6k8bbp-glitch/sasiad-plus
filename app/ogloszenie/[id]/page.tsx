@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import OwnerSummary from "@/components/OwnerSummary";
+import ListingGallery from "@/components/ListingGallery";
 import { auth } from "@/lib/auth";
 import { getListingById } from "@/lib/db";
 import { startConversation } from "@/app/wiadomosci/actions";
@@ -17,11 +18,24 @@ const categoryNames: Record<string, string> = {
   dom: "Dom",
 };
 
-function imageUrl(imageKey: string): string {
-  return `/api/images/${imageKey
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/")}`;
+function getImageKeys(imageKeys: string | null, legacyImageKey: string | null): string[] {
+  if (imageKeys) {
+    try {
+      const parsedImageKeys: unknown = JSON.parse(imageKeys);
+      if (
+        Array.isArray(parsedImageKeys) &&
+        parsedImageKeys.length > 0 &&
+        parsedImageKeys.length <= 5 &&
+        parsedImageKeys.every((imageKey) => typeof imageKey === "string")
+      ) {
+        return parsedImageKeys;
+      }
+    } catch {
+      // Starsze ogłoszenia korzystają z pojedynczego zdjęcia poniżej.
+    }
+  }
+
+  return legacyImageKey ? [legacyImageKey] : [];
 }
 
 export default async function ListingPage({
@@ -44,6 +58,7 @@ export default async function ListingPage({
 
   const session = await auth.api.getSession({ headers: await headers() });
   const isOwner = session?.user.id === listing.owner_id;
+  const imageKeys = getImageKeys(listing.image_keys, listing.image_key);
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
@@ -69,17 +84,13 @@ export default async function ListingPage({
 
         <div className="mt-7 grid gap-8 lg:grid-cols-[1.5fr_0.8fr]">
           <section>
-            <div className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-[36px] bg-gradient-to-br from-green-50 to-emerald-100 md:min-h-[500px]">
-              {listing.image_key ? (
-                <img
-                  src={imageUrl(listing.image_key)}
-                  alt={listing.title}
-                  className="h-full min-h-[360px] w-full object-cover md:min-h-[500px]"
-                />
-              ) : (
+            {imageKeys.length > 0 ? (
+              <ListingGallery imageKeys={imageKeys} title={listing.title} />
+            ) : (
+              <div className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-[36px] bg-gradient-to-br from-green-50 to-emerald-100 md:min-h-[500px]">
                 <span className="text-9xl">{listing.icon}</span>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
               <p className="text-sm font-bold uppercase tracking-wider text-green-700">
