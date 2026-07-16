@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import OwnerSummary from "@/components/OwnerSummary";
+import { auth } from "@/lib/auth";
 import { getListingById } from "@/lib/db";
+import { startConversation } from "@/app/wiadomosci/actions";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -38,6 +41,9 @@ export default async function ListingPage({
   if (!listing) {
     notFound();
   }
+
+  const session = await auth.api.getSession({ headers: await headers() });
+  const isOwner = session?.user.id === listing.owner_id;
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
@@ -112,12 +118,32 @@ export default async function ListingPage({
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="mt-6 w-full rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
-              >
-                Zapytaj właściciela
-              </button>
+              {!listing.owner_id ? (
+                <p className="mt-6 rounded-2xl bg-slate-100 p-4 text-center text-sm font-semibold text-slate-600">
+                  Kontakt jest niedostępny dla starszego ogłoszenia.
+                </p>
+              ) : isOwner ? (
+                <p className="mt-6 rounded-2xl bg-green-50 p-4 text-center font-semibold text-green-800">
+                  To jest Twoje ogłoszenie.
+                </p>
+              ) : !session ? (
+                <Link
+                  href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
+                  className="mt-6 flex w-full items-center justify-center rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
+                >
+                  Zaloguj się, aby napisać
+                </Link>
+              ) : (
+                <form action={startConversation}>
+                  <input type="hidden" name="listing_id" value={listing.id} />
+                  <button
+                    type="submit"
+                    className="mt-6 w-full rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
+                  >
+                    Napisz do właściciela
+                  </button>
+                </form>
+              )}
 
               <div className="mt-6 border-t border-slate-200 pt-6">
                 <OwnerSummary ownerName={listing.owner_name} />

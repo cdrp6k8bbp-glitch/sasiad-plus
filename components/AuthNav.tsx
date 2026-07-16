@@ -40,6 +40,13 @@ export default function AuthNav() {
   return (
     <div className="flex items-center gap-2">
       <Link
+        href="/wiadomosci"
+        className="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 md:inline-flex"
+      >
+        Wiadomości
+      </Link>
+
+      <Link
         href="/profil"
         className="max-w-36 truncate rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-800 transition hover:bg-green-100"
       >
