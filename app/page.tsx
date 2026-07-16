@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
-import { getListings } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { getFavoriteListingIds, getListings } from "@/lib/db";
 
 const categories = [
   {
@@ -61,7 +63,13 @@ export default async function Home({
   const q = params.q?.trim().toLowerCase() ?? "";
   const location = params.location?.trim().toLowerCase() ?? "";
 
-  const allListings = await getListings(undefined, 100);
+  const [allListings, session] = await Promise.all([
+    getListings(undefined, 100),
+    auth.api.getSession({ headers: await headers() }),
+  ]);
+  const favoriteIds = new Set(
+    session ? await getFavoriteListingIds(session.user.id) : [],
+  );
 
   const listings = allListings
     .filter((listing) => {
@@ -324,6 +332,7 @@ export default async function Home({
                 place={listing.location}
                 price={listing.price}
                 ownerName={listing.owner_name}
+                isFavorite={favoriteIds.has(listing.id)}
               />
             ))}
           </div>

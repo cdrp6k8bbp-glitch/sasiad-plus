@@ -8,6 +8,8 @@ import { getListingById } from "@/lib/db";
 import { parseListingImageKeys } from "@/lib/listing-images";
 import { startConversation } from "@/app/wiadomosci/actions";
 import ListingOwnerActions from "@/components/ListingOwnerActions";
+import FavoriteButton from "@/components/FavoriteButton";
+import { getFavoriteListingIds } from "@/lib/db";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -43,6 +45,9 @@ export default async function ListingPage({
 
   const session = await auth.api.getSession({ headers: await headers() });
   const isOwner = session?.user.id === listing.owner_id;
+  const isFavorite = session
+    ? (await getFavoriteListingIds(session.user.id)).includes(listing.id)
+    : false;
   const imageKeys = parseListingImageKeys(
     listing.image_keys,
     listing.image_key,
@@ -146,6 +151,14 @@ export default async function ListingPage({
                     Napisz do właściciela
                   </button>
                 </form>
+              )}
+
+              {!isOwner && (
+                <FavoriteButton
+                  listingId={listing.id}
+                  initialIsFavorite={isFavorite}
+                  wide
+                />
               )}
 
               <div className="mt-6 border-t border-slate-200 pt-6">

@@ -40,6 +40,13 @@ export default function AuthNav() {
   return (
     <div className="flex items-center gap-2">
       <Link
+        href="/profil#ulubione"
+        className="hidden rounded-full px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 lg:inline-flex"
+      >
+        ♥ Ulubione
+      </Link>
+
+      <Link
         href="/wiadomosci"
         className="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 md:inline-flex"
       >

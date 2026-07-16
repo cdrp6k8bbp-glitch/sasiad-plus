@@ -100,6 +100,37 @@ export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
   return result.results;
 }
 
+export async function getFavoriteListingIds(userId: string): Promise<number[]> {
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `SELECT listing_id
+     FROM favorite_listings
+     WHERE user_id = ?`,
+  )
+    .bind(userId)
+    .all<{ listing_id: number }>();
+
+  return result.results.map((favorite) => favorite.listing_id);
+}
+
+export async function getFavoriteListingsByUser(
+  userId: string,
+): Promise<Listing[]> {
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `SELECT ${LISTING_COLUMNS}
+     ${LISTING_SOURCE}
+     INNER JOIN favorite_listings
+       ON favorite_listings.listing_id = listings.id
+     WHERE favorite_listings.user_id = ?
+     ORDER BY favorite_listings.created_at DESC`,
+  )
+    .bind(userId)
+    .all<Listing>();
+
+  return result.results;
+}
+
 export async function getListingById(id: number): Promise<Listing | null> {
   const { env } = await getCloudflareContext({ async: true });
 

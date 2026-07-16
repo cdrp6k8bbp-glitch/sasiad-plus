@@ -1,8 +1,16 @@
 import ListingCard from "@/components/ListingCard";
-import { getListings } from "@/lib/db";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { getFavoriteListingIds, getListings } from "@/lib/db";
 
 export default async function Sprzet() {
-  const listings = await getListings("sprzet");
+  const [listings, session] = await Promise.all([
+    getListings("sprzet"),
+    auth.api.getSession({ headers: await headers() }),
+  ]);
+  const favoriteIds = new Set(
+    session ? await getFavoriteListingIds(session.user.id) : [],
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
@@ -32,6 +40,7 @@ export default async function Sprzet() {
   place={listing.location}
   price={listing.price}
   ownerName={listing.owner_name}
+  isFavorite={favoriteIds.has(listing.id)}
 />
           ))}
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import OwnerSummary from "@/components/OwnerSummary";
+import FavoriteButton from "@/components/FavoriteButton";
 
 type ListingProps = {
   id: number;
@@ -10,6 +11,8 @@ type ListingProps = {
   price: string;
   subcategory?: string | null;
   ownerName?: string | null;
+  isFavorite?: boolean;
+  showFavorite?: boolean;
 };
 
 function imageUrl(imageKey: string): string {
@@ -28,6 +31,8 @@ export default function ListingCard({
   price,
   subcategory,
   ownerName,
+  isFavorite = false,
+  showFavorite = true,
 }: ListingProps) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
@@ -45,13 +50,12 @@ export default function ListingCard({
           </span>
         )}
 
-        <button
-          type="button"
-          aria-label="Dodaj do ulubionych"
-          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-xl shadow"
-        >
-          ♡
-        </button>
+        {showFavorite && (
+          <FavoriteButton
+            listingId={id}
+            initialIsFavorite={isFavorite}
+          />
+        )}
 
         <span className="absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-green-700 shadow">
           Dostępne
