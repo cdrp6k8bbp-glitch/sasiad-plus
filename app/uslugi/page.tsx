@@ -31,6 +31,7 @@ export default async function Uslugi() {
               title={listing.title}
               place={listing.location}
               price={listing.price}
+              ownerName={listing.owner_name}
             />
           ))}
         </div>

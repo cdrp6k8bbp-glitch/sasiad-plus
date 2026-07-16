@@ -10,20 +10,29 @@ export type Listing = {
   location: string;
   icon: string;
   image_key: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
   created_at: string;
 };
 
 const LISTING_COLUMNS = `
-  id,
-  title,
-  category,
-  subcategory,
-  description,
-  price,
-  location,
-  icon,
-  image_key,
-  created_at
+  listings.id,
+  listings.title,
+  listings.category,
+  listings.subcategory,
+  listings.description,
+  listings.price,
+  listings.location,
+  listings.icon,
+  listings.image_key,
+  listings.owner_id,
+  listings.created_at,
+  "user".name AS owner_name
+`;
+
+const LISTING_SOURCE = `
+  FROM listings
+  LEFT JOIN "user" ON "user".id = listings.owner_id
 `;
 
 export async function getListings(
@@ -37,9 +46,9 @@ export async function getListings(
 
     const result = await env.DB.prepare(
       `SELECT ${LISTING_COLUMNS}
-       FROM listings
-       WHERE category IN (${placeholders})
-       ORDER BY created_at DESC
+       ${LISTING_SOURCE}
+       WHERE listings.category IN (${placeholders})
+       ORDER BY listings.created_at DESC
        LIMIT ?`,
     )
       .bind(...category, limit)
@@ -51,9 +60,9 @@ export async function getListings(
   if (typeof category === "string" && category.length > 0) {
     const result = await env.DB.prepare(
       `SELECT ${LISTING_COLUMNS}
-       FROM listings
-       WHERE category = ?
-       ORDER BY created_at DESC
+       ${LISTING_SOURCE}
+       WHERE listings.category = ?
+       ORDER BY listings.created_at DESC
        LIMIT ?`,
     )
       .bind(category, limit)
@@ -64,11 +73,26 @@ export async function getListings(
 
   const result = await env.DB.prepare(
     `SELECT ${LISTING_COLUMNS}
-     FROM listings
-     ORDER BY created_at DESC
+     ${LISTING_SOURCE}
+     ORDER BY listings.created_at DESC
      LIMIT ?`,
   )
     .bind(limit)
+    .all<Listing>();
+
+  return result.results;
+}
+
+export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
+  const { env } = await getCloudflareContext({ async: true });
+
+  const result = await env.DB.prepare(
+    `SELECT ${LISTING_COLUMNS}
+     ${LISTING_SOURCE}
+     WHERE listings.owner_id = ?
+     ORDER BY listings.created_at DESC`,
+  )
+    .bind(ownerId)
     .all<Listing>();
 
   return result.results;
@@ -79,8 +103,8 @@ export async function getListingById(id: number): Promise<Listing | null> {
 
   const listing = await env.DB.prepare(
     `SELECT ${LISTING_COLUMNS}
-     FROM listings
-     WHERE id = ?
+     ${LISTING_SOURCE}
+     WHERE listings.id = ?
      LIMIT 1`,
   )
     .bind(id)

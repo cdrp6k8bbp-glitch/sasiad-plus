@@ -9,6 +9,7 @@ type ListingProps = {
   place: string;
   price: string;
   subcategory?: string | null;
+  ownerName?: string | null;
 };
 
 function imageUrl(imageKey: string): string {
@@ -26,6 +27,7 @@ export default function ListingCard({
   place,
   price,
   subcategory,
+  ownerName,
 }: ListingProps) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
@@ -80,7 +82,7 @@ export default function ListingCard({
           </Link>
         </div>
 
-        <OwnerSummary compact />
+        <OwnerSummary compact ownerName={ownerName} />
       </div>
     </article>
   );

@@ -120,7 +120,7 @@ export default async function ListingPage({
               </button>
 
               <div className="mt-6 border-t border-slate-200 pt-6">
-                <OwnerSummary />
+                <OwnerSummary ownerName={listing.owner_name} />
               </div>
             </div>
           </aside>

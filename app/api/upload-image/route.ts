@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -19,6 +20,15 @@ function getExtension(contentType: string): string {
 
 export async function POST(request: Request) {
   try {
+    const session = await auth.api.getSession({ headers: request.headers });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Zaloguj się, aby dodać zdjęcie." },
+        { status: 401 },
+      );
+    }
+
     const formData = await request.formData();
     const image = formData.get("image");
 

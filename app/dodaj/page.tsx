@@ -1,11 +1,20 @@
 import CategoryFields from "@/components/CategoryFields";
 import ImageUploader from "@/components/ImageUploader";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { addListing } from "./actions";
 
 const fieldClassName =
   "w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100";
 
-export default function Dodaj() {
+export default async function Dodaj() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session) {
+    redirect("/logowanie?redirect=/dodaj");
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 p-4 py-10 text-slate-900 md:p-8">
       <div className="mx-auto max-w-xl">
@@ -14,7 +23,8 @@ export default function Dodaj() {
         </h1>
 
         <p className="mt-4 text-slate-600">
-          Podziel się sprzętem lub zaoferuj pomoc sąsiadom.
+          Podziel się sprzętem lub zaoferuj pomoc sąsiadom jako{" "}
+          <strong>{session.user.name}</strong>.
         </p>
 
         <form

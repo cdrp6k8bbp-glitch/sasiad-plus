@@ -2,7 +2,9 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import {
   CATEGORIES,
   isCategoryKey,
@@ -30,6 +32,12 @@ function readOptionalText(formData: FormData, field: string): string | null {
 }
 
 export async function addListing(formData: FormData): Promise<void> {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session) {
+    redirect("/logowanie?redirect=/dodaj");
+  }
+
   const title = readRequiredText(formData, "title");
   const category = readRequiredText(formData, "category");
   const subcategory = readRequiredText(formData, "subcategory");
@@ -64,8 +72,9 @@ export async function addListing(formData: FormData): Promise<void> {
         price,
         location,
         icon,
-        image_key
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        image_key,
+        owner_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         title,
@@ -76,6 +85,7 @@ export async function addListing(formData: FormData): Promise<void> {
         location,
         icon,
         imageKey,
+        session.user.id,
       )
       .run();
   } catch (error) {
@@ -89,6 +99,7 @@ export async function addListing(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
+  revalidatePath("/profil");
 
   redirect("/?dodano=1");
 }
