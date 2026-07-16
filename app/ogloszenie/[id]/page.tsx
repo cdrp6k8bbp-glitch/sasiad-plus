@@ -5,7 +5,9 @@ import OwnerSummary from "@/components/OwnerSummary";
 import ListingGallery from "@/components/ListingGallery";
 import { auth } from "@/lib/auth";
 import { getListingById } from "@/lib/db";
+import { parseListingImageKeys } from "@/lib/listing-images";
 import { startConversation } from "@/app/wiadomosci/actions";
+import ListingOwnerActions from "@/components/ListingOwnerActions";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -18,32 +20,15 @@ const categoryNames: Record<string, string> = {
   dom: "Dom",
 };
 
-function getImageKeys(imageKeys: string | null, legacyImageKey: string | null): string[] {
-  if (imageKeys) {
-    try {
-      const parsedImageKeys: unknown = JSON.parse(imageKeys);
-      if (
-        Array.isArray(parsedImageKeys) &&
-        parsedImageKeys.length > 0 &&
-        parsedImageKeys.length <= 5 &&
-        parsedImageKeys.every((imageKey) => typeof imageKey === "string")
-      ) {
-        return parsedImageKeys;
-      }
-    } catch {
-      // Starsze ogłoszenia korzystają z pojedynczego zdjęcia poniżej.
-    }
-  }
-
-  return legacyImageKey ? [legacyImageKey] : [];
-}
-
 export default async function ListingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ zapisano?: string }>;
 }) {
   const { id } = await params;
+  const { zapisano } = await searchParams;
   const listingId = Number(id);
 
   if (!Number.isInteger(listingId) || listingId < 1) {
@@ -58,7 +43,10 @@ export default async function ListingPage({
 
   const session = await auth.api.getSession({ headers: await headers() });
   const isOwner = session?.user.id === listing.owner_id;
-  const imageKeys = getImageKeys(listing.image_keys, listing.image_key);
+  const imageKeys = parseListingImageKeys(
+    listing.image_keys,
+    listing.image_key,
+  );
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
@@ -81,6 +69,12 @@ export default async function ListingPage({
         <Link href="/" className="font-semibold text-green-700 hover:underline">
           ← Wróć
         </Link>
+
+        {zapisano === "1" && (
+          <p className="mt-6 rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Zmiany w ogłoszeniu zostały zapisane.
+          </p>
+        )}
 
         <div className="mt-7 grid gap-8 lg:grid-cols-[1.5fr_0.8fr]">
           <section>
@@ -134,9 +128,7 @@ export default async function ListingPage({
                   Kontakt jest niedostępny dla starszego ogłoszenia.
                 </p>
               ) : isOwner ? (
-                <p className="mt-6 rounded-2xl bg-green-50 p-4 text-center font-semibold text-green-800">
-                  To jest Twoje ogłoszenie.
-                </p>
+                <ListingOwnerActions listingId={listing.id} />
               ) : !session ? (
                 <Link
                   href={`/logowanie?redirect=/ogloszenie/${listing.id}`}

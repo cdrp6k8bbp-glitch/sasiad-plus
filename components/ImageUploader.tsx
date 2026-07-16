@@ -13,17 +13,37 @@ type UploadResponse = {
 
 type UploadItem = {
   id: string;
-  file: File;
+  file?: File;
   previewUrl: string;
   imageKey: string;
   status: "uploading" | "ready" | "error";
+  isExisting: boolean;
   error?: string;
 };
 
-export default function ImageUploader() {
+function imageUrl(imageKey: string): string {
+  return `/api/images/${imageKey
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+}
+
+export default function ImageUploader({
+  initialImageKeys = [],
+}: {
+  initialImageKeys?: string[];
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [items, setItems] = useState<UploadItem[]>([]);
+  const [items, setItems] = useState<UploadItem[]>(() =>
+    initialImageKeys.slice(0, MAX_IMAGES).map((imageKey, index) => ({
+      id: `existing-${index}-${imageKey}`,
+      previewUrl: imageUrl(imageKey),
+      imageKey,
+      status: "ready",
+      isExisting: true,
+    })),
+  );
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -46,6 +66,8 @@ export default function ImageUploader() {
   }, [isUploading]);
 
   async function uploadFile(item: UploadItem) {
+    if (!item.file) return;
+
     try {
       const formData = new FormData();
       formData.append("image", item.file);
@@ -118,6 +140,7 @@ export default function ImageUploader() {
         previewUrl: URL.createObjectURL(file),
         imageKey: "",
         status: "uploading",
+        isExisting: false,
       });
     }
 
@@ -142,10 +165,12 @@ export default function ImageUploader() {
     if (item.status === "uploading") return;
 
     setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
-    URL.revokeObjectURL(item.previewUrl);
+    if (!item.isExisting) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
     setError(null);
 
-    if (item.imageKey) {
+    if (item.imageKey && !item.isExisting) {
       try {
         await fetch("/api/upload-image", {
           method: "DELETE",
@@ -237,13 +262,15 @@ export default function ImageUploader() {
               </div>
               <div className="p-3">
                 <p className="truncate text-xs font-semibold text-slate-700">
-                  {item.file.name}
+                  {item.file?.name ?? `Zdjęcie ${index + 1}`}
                 </p>
                 {item.status === "uploading" && (
                   <p className="mt-1 text-xs font-semibold text-blue-600">Wysyłanie…</p>
                 )}
                 {item.status === "ready" && (
-                  <p className="mt-1 text-xs font-semibold text-green-700">✓ Gotowe</p>
+                  <p className="mt-1 text-xs font-semibold text-green-700">
+                    {item.isExisting ? "✓ Zapisane" : "✓ Gotowe"}
+                  </p>
                 )}
                 {item.status === "error" && (
                   <p className="mt-1 text-xs font-semibold text-red-600">

@@ -2,10 +2,26 @@
 
 import { useState } from "react";
 import { CATEGORIES, type CategoryKey } from "@/lib/categories";
+import { isCategoryKey, isValidSubcategory } from "@/lib/categories";
 
-export default function CategoryFields() {
-  const [category, setCategory] = useState<CategoryKey | "">("");
-  const [subcategory, setSubcategory] = useState("");
+export default function CategoryFields({
+  initialCategory,
+  initialSubcategory,
+}: {
+  initialCategory?: string | null;
+  initialSubcategory?: string | null;
+}) {
+  const startingCategory =
+    initialCategory && isCategoryKey(initialCategory) ? initialCategory : "";
+  const startingSubcategory =
+    startingCategory &&
+    initialSubcategory &&
+    isValidSubcategory(startingCategory, initialSubcategory)
+      ? initialSubcategory
+      : "";
+
+  const [category, setCategory] = useState<CategoryKey | "">(startingCategory);
+  const [subcategory, setSubcategory] = useState(startingSubcategory);
 
   const subcategories = category
     ? CATEGORIES[category].subcategories

@@ -3,11 +3,17 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
+import ListingOwnerActions from "@/components/ListingOwnerActions";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { auth } from "@/lib/auth";
 import { getListingsByOwner } from "@/lib/db";
 
-export default async function ProfilPage() {
+export default async function ProfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ usunieto?: string }>;
+}) {
+  const { usunieto } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
@@ -42,6 +48,12 @@ export default async function ProfilPage() {
           createdAt={new Date(session.user.createdAt)}
         />
 
+        {usunieto === "1" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Ogłoszenie zostało usunięte.
+          </p>
+        )}
+
         <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -70,17 +82,19 @@ export default async function ProfilPage() {
           ) : (
             <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {listings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  id={listing.id}
-                  icon={listing.icon}
-                  imageKey={listing.image_key}
-                  subcategory={listing.subcategory}
-                  title={listing.title}
-                  place={listing.location}
-                  price={listing.price}
-                  ownerName={listing.owner_name}
-                />
+                <div key={listing.id} className="space-y-3">
+                  <ListingCard
+                    id={listing.id}
+                    icon={listing.icon}
+                    imageKey={listing.image_key}
+                    subcategory={listing.subcategory}
+                    title={listing.title}
+                    place={listing.location}
+                    price={listing.price}
+                    ownerName={listing.owner_name}
+                  />
+                  <ListingOwnerActions listingId={listing.id} compact />
+                </div>
               ))}
             </div>
           )}
