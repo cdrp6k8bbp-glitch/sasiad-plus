@@ -27,16 +27,12 @@ export default function ImageUploader() {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-
-    const nextPreviewUrl = URL.createObjectURL(file);
-    setPreviewUrl(nextPreviewUrl);
-
-    return () => URL.revokeObjectURL(nextPreviewUrl);
-  }, [file]);
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   async function uploadFile(nextFile: File) {
     setIsUploading(true);
@@ -61,6 +57,7 @@ export default function ImageUploader() {
       setImageKey(result.imageKey);
     } catch (uploadError) {
       setFile(null);
+      setPreviewUrl(null);
 
       setError(
         uploadError instanceof Error
@@ -87,6 +84,7 @@ export default function ImageUploader() {
 
     setError(null);
     setFile(nextFile);
+    setPreviewUrl(URL.createObjectURL(nextFile));
 
     await uploadFile(nextFile);
   }
@@ -104,6 +102,7 @@ export default function ImageUploader() {
 
   function removeFile() {
     setFile(null);
+    setPreviewUrl(null);
     setImageKey("");
     setError(null);
 

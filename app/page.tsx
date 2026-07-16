@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import { getListings } from "@/lib/db";
 
@@ -105,14 +106,20 @@ export default async function Home({
             >
               + Dodaj ogłoszenie
             </Link>
+
+            <AuthNav />
           </nav>
 
-          <Link
-            href="/dodaj"
-            className="rounded-full bg-green-700 px-4 py-2 text-sm font-semibold text-white md:hidden"
-          >
-            + Dodaj
-          </Link>
+          <div className="flex items-center gap-2 md:hidden">
+            <Link
+              href="/dodaj"
+              className="rounded-full bg-green-700 px-4 py-2 text-sm font-semibold text-white"
+            >
+              + Dodaj
+            </Link>
+
+            <AuthNav />
+          </div>
         </div>
       </header>
 
