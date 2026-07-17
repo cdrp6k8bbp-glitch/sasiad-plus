@@ -16,6 +16,7 @@ import {
   getReviewsForUser,
   getReviewSummary,
 } from "@/lib/reviews";
+import { getUserProfileDetails } from "@/lib/profiles";
 import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
 
 function initials(name: string): string {
@@ -40,13 +41,22 @@ export default async function PublicProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [user, reviews, summary, listings, session, trustStats] = await Promise.all([
+  const [
+    user,
+    reviews,
+    summary,
+    listings,
+    session,
+    trustStats,
+    profileDetails,
+  ] = await Promise.all([
     getPublicUser(id),
     getReviewsForUser(id),
     getReviewSummary(id),
     getListingsByOwner(id),
     auth.api.getSession({ headers: await headers() }),
     getUserTrustStats(id),
+    getUserProfileDetails(id),
   ]);
 
   if (!user) {
@@ -87,11 +97,19 @@ export default async function PublicProfilePage({
             <p className="mt-2 text-slate-500">
               🏡 W Sąsiad+ od {formatDate(user.created_at)}
             </p>
+            {profileDetails.city && (
+              <p className="mt-1 text-slate-500">📍 {profileDetails.city}</p>
+            )}
             <p className="mt-3 text-xl font-black text-amber-600">
               {summary.average !== null
                 ? `⭐ ${summary.average.toFixed(1)} · ${summary.count} opinii`
                 : "☆ Brak opinii"}
             </p>
+            {profileDetails.bio && (
+              <p className="mt-5 max-w-3xl whitespace-pre-line leading-7 text-slate-600">
+                {profileDetails.bio}
+              </p>
+            )}
           </div>
         </section>
 

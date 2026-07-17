@@ -1,3 +1,4 @@
+import Link from "next/link";
 import TrustBadge from "./TrustBadge";
 import type { TrustLevel } from "@/lib/trust";
 
@@ -6,6 +7,8 @@ type ProfileHeaderProps = {
   email: string;
   createdAt: Date;
   trustLevel: TrustLevel;
+  city?: string | null;
+  bio?: string | null;
 };
 
 export default function ProfileHeader({
@@ -13,6 +16,8 @@ export default function ProfileHeader({
   email,
   createdAt,
   trustLevel,
+  city,
+  bio,
 }: ProfileHeaderProps) {
   const initials = name
     .split(/\s+/)
@@ -47,10 +52,26 @@ export default function ProfileHeader({
               <p className="mt-1 text-slate-500">
                 🏡 Sąsiad od {joinedAt}
               </p>
+
+              {city && <p className="mt-1 text-slate-500">📍 {city}</p>}
             </div>
 
-            <TrustBadge level={trustLevel} />
+            <div className="flex flex-wrap items-center gap-2">
+              <TrustBadge level={trustLevel} />
+              <Link
+                href="/profil/edytuj"
+                className="rounded-full border border-green-700 px-3 py-1.5 text-sm font-bold text-green-700 transition hover:bg-green-50"
+              >
+                Edytuj profil
+              </Link>
+            </div>
           </div>
+
+          {bio && (
+            <p className="mt-5 max-w-3xl whitespace-pre-line leading-7 text-slate-600">
+              {bio}
+            </p>
+          )}
         </div>
       </div>
     </section>

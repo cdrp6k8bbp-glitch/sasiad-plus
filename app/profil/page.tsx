@@ -17,14 +17,19 @@ import {
   getReservationsForOwner,
   getReservationsForRequester,
 } from "@/lib/reservations";
+import { getUserProfileDetails } from "@/lib/profiles";
 import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
 
 export default async function ProfilPage({
   searchParams,
 }: {
-  searchParams: Promise<{ usunieto?: string; oceniono?: string }>;
+  searchParams: Promise<{
+    usunieto?: string;
+    oceniono?: string;
+    zapisano?: string;
+  }>;
 }) {
-  const { usunieto, oceniono } = await searchParams;
+  const { usunieto, oceniono, zapisano } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
@@ -37,12 +42,14 @@ export default async function ProfilPage({
     incomingReservations,
     requestedReservations,
     trustStats,
+    profileDetails,
   ] = await Promise.all([
     getListingsByOwner(session.user.id),
     getFavoriteListingsByUser(session.user.id),
     getReservationsForOwner(session.user.id),
     getReservationsForRequester(session.user.id),
     getUserTrustStats(session.user.id),
+    getUserProfileDetails(session.user.id),
   ]);
   const trustLevel = getTrustLevel(trustStats);
 
@@ -71,6 +78,8 @@ export default async function ProfilPage({
           email={session.user.email}
           createdAt={new Date(session.user.createdAt)}
           trustLevel={trustLevel}
+          city={profileDetails.city}
+          bio={profileDetails.bio}
         />
 
         <UserStats
@@ -91,6 +100,12 @@ export default async function ProfilPage({
         {oceniono === "1" && (
           <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
             ✓ Dziękujemy — Twoja opinia została opublikowana.
+          </p>
+        )}
+
+        {zapisano === "1" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Profil został zaktualizowany.
           </p>
         )}
 
