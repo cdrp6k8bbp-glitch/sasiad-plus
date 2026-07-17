@@ -59,14 +59,29 @@ export default async function WiadomosciPage() {
               <Link
                 key={conversation.id}
                 href={`/wiadomosci/${conversation.id}`}
-                className="flex items-center gap-4 border-b border-slate-100 p-5 transition last:border-b-0 hover:bg-green-50"
+                className={`flex items-center gap-4 border-b border-slate-100 p-5 transition last:border-b-0 hover:bg-green-50 ${
+                  conversation.unread_count > 0 ? "bg-green-50/70" : ""
+                }`}
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100 text-xl">
+                <div className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl ${
+                  conversation.unread_count > 0
+                    ? "bg-green-700 text-white"
+                    : "bg-green-100"
+                }`}>
                   💬
+                  {conversation.unread_count > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
+                      {conversation.unread_count > 99
+                        ? "99+"
+                        : conversation.unread_count}
+                    </span>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="truncate font-black">
+                    <p className={`truncate ${
+                      conversation.unread_count > 0 ? "font-black" : "font-bold"
+                    }`}>
                       {conversation.other_user_name}
                     </p>
                     <time className="shrink-0 text-xs text-slate-400">
@@ -76,7 +91,11 @@ export default async function WiadomosciPage() {
                   <p className="mt-1 truncate text-sm font-semibold text-green-700">
                     {conversation.listing_title}
                   </p>
-                  <p className="mt-1 truncate text-sm text-slate-500">
+                  <p className={`mt-1 truncate text-sm ${
+                    conversation.unread_count > 0
+                      ? "font-bold text-slate-800"
+                      : "text-slate-500"
+                  }`}>
                     {conversation.last_message ?? "Rozmowa rozpoczęta"}
                   </p>
                 </div>

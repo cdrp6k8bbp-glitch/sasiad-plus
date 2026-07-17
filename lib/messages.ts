@@ -6,6 +6,7 @@ export type ConversationSummary = {
   listing_title: string;
   other_user_name: string;
   last_message: string | null;
+  unread_count: number;
   updated_at: string;
 };
 
@@ -49,6 +50,13 @@ export async function getConversationsForUser(
          ORDER BY messages.created_at DESC, messages.id DESC
          LIMIT 1
        ) AS last_message,
+       (
+         SELECT COUNT(*)
+         FROM messages
+         WHERE messages.conversation_id = conversations.id
+           AND messages.sender_id != ?
+           AND messages.read_at IS NULL
+       ) AS unread_count,
        conversations.updated_at
      FROM conversations
      JOIN listings ON listings.id = conversations.listing_id
@@ -57,10 +65,49 @@ export async function getConversationsForUser(
      WHERE conversations.buyer_id = ? OR conversations.seller_id = ?
      ORDER BY conversations.updated_at DESC, conversations.id DESC`,
   )
-    .bind(userId, userId, userId)
+    .bind(userId, userId, userId, userId)
     .all<ConversationSummary>();
 
   return result.results;
+}
+
+export async function getUnreadMessageCount(userId: string): Promise<number> {
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `SELECT COUNT(*) AS unread_count
+     FROM messages
+     JOIN conversations ON conversations.id = messages.conversation_id
+     WHERE messages.sender_id != ?
+       AND messages.read_at IS NULL
+       AND (conversations.buyer_id = ? OR conversations.seller_id = ?)`,
+  )
+    .bind(userId, userId, userId)
+    .first<{ unread_count: number }>();
+
+  return result?.unread_count ?? 0;
+}
+
+export async function markConversationAsRead(
+  conversationId: number,
+  userId: string,
+): Promise<void> {
+  const { env } = await getCloudflareContext({ async: true });
+
+  await env.DB.prepare(
+    `UPDATE messages
+     SET read_at = datetime('now')
+     WHERE conversation_id = ?
+       AND sender_id != ?
+       AND read_at IS NULL
+       AND EXISTS (
+         SELECT 1
+         FROM conversations
+         WHERE conversations.id = messages.conversation_id
+           AND (conversations.buyer_id = ? OR conversations.seller_id = ?)
+       )`,
+  )
+    .bind(conversationId, userId, userId, userId)
+    .run();
 }
 
 export async function getConversationForUser(

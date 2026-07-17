@@ -3,7 +3,11 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import AuthNav from "@/components/AuthNav";
 import { auth } from "@/lib/auth";
-import { getConversationForUser, getMessages } from "@/lib/messages";
+import {
+  getConversationForUser,
+  getMessages,
+  markConversationAsRead,
+} from "@/lib/messages";
 import { sendMessage } from "../actions";
 
 function formatDate(value: string): string {
@@ -41,6 +45,7 @@ export default async function ConversationPage({
     notFound();
   }
 
+  await markConversationAsRead(conversation.id, session.user.id);
   const messages = await getMessages(conversation.id);
   const otherUserName =
     conversation.buyer_id === session.user.id
