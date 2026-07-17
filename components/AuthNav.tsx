@@ -9,6 +9,7 @@ export default function AuthNav() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     if (!session) return;
@@ -17,14 +18,25 @@ export default function AuthNav() {
 
     async function loadUnreadCount() {
       try {
-        const response = await fetch("/api/unread-messages", {
-          cache: "no-store",
-        });
-        if (!response.ok) return;
+        const [messagesResponse, notificationsResponse] = await Promise.all([
+          fetch("/api/unread-messages", { cache: "no-store" }),
+          fetch("/api/unread-notifications", { cache: "no-store" }),
+        ]);
 
-        const result = (await response.json()) as { unreadCount?: number };
-        if (isActive && typeof result.unreadCount === "number") {
-          setUnreadCount(result.unreadCount);
+        if (messagesResponse.ok) {
+          const result = (await messagesResponse.json()) as { unreadCount?: number };
+          if (isActive && typeof result.unreadCount === "number") {
+            setUnreadCount(result.unreadCount);
+          }
+        }
+
+        if (notificationsResponse.ok) {
+          const result = (await notificationsResponse.json()) as {
+            unreadCount?: number;
+          };
+          if (isActive && typeof result.unreadCount === "number") {
+            setNotificationCount(result.unreadCount);
+          }
         }
       } catch {
         // Brak połączenia nie powinien blokować nawigacji.
@@ -83,6 +95,24 @@ export default function AuthNav() {
         className="hidden rounded-full px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-50 xl:inline-flex"
       >
         Rezerwacje
+      </Link>
+
+      <Link
+        href="/powiadomienia"
+        aria-label={
+          notificationCount > 0
+            ? `Powiadomienia, nieprzeczytane: ${notificationCount}`
+            : "Powiadomienia"
+        }
+        className="relative inline-flex rounded-full px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
+      >
+        <span aria-hidden="true" className="md:hidden">🔔</span>
+        <span className="hidden md:inline">Powiadomienia</span>
+        {notificationCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
+            {notificationCount > 99 ? "99+" : notificationCount}
+          </span>
+        )}
       </Link>
 
       <Link

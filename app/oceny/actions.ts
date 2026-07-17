@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { createNotificationStatement } from "@/lib/notifications";
 
 function positiveInteger(value: FormDataEntryValue | null): number | null {
   if (typeof value !== "string") return null;
@@ -56,20 +57,27 @@ export async function createReview(formData: FormData): Promise<void> {
     throw new Error("Nie możesz ocenić tej rezerwacji.");
   }
 
-  await env.DB.prepare(
-    `INSERT INTO reviews (
-       reservation_id, listing_id, reviewer_id, reviewed_id, rating, body
-     ) VALUES (?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO reviews (
+         reservation_id, listing_id, reviewer_id, reviewed_id, rating, body
+       ) VALUES (?, ?, ?, ?, ?, ?)`,
+    ).bind(
       reservationId,
       reservation.listing_id,
       session.user.id,
       reservation.owner_id,
       rating,
       body,
-    )
-    .run();
+    ),
+    createNotificationStatement(env.DB, {
+      userId: reservation.owner_id,
+      type: "review_received",
+      title: "Nowa opinia",
+      body: `${session.user.name} wystawił(a) Ci ocenę ${rating}/5.`,
+      href: `/u/${reservation.owner_id}`,
+    }),
+  ]);
 
   revalidatePath("/profil");
   revalidatePath(`/u/${reservation.owner_id}`);
