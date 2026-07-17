@@ -15,6 +15,7 @@ import {
   createReservation,
 } from "@/app/rezerwacje/actions";
 import { getActiveReservationForListingAndUser } from "@/lib/reservations";
+import { getReviewSummary } from "@/lib/reviews";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -63,6 +64,9 @@ export default async function ListingPage({
     listing.image_keys,
     listing.image_key,
   );
+  const ownerReviewSummary = listing.owner_id
+    ? await getReviewSummary(listing.owner_id)
+    : null;
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
@@ -279,7 +283,12 @@ export default async function ListingPage({
               )}
 
               <div className="mt-6 border-t border-slate-200 pt-6">
-                <OwnerSummary ownerName={listing.owner_name} />
+                <OwnerSummary
+                  ownerId={listing.owner_id}
+                  ownerName={listing.owner_name}
+                  rating={ownerReviewSummary?.average}
+                  reviewCount={ownerReviewSummary?.count}
+                />
               </div>
             </div>
           </aside>

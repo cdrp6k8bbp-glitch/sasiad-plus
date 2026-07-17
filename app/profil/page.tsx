@@ -19,9 +19,9 @@ import {
 export default async function ProfilPage({
   searchParams,
 }: {
-  searchParams: Promise<{ usunieto?: string }>;
+  searchParams: Promise<{ usunieto?: string; oceniono?: string }>;
 }) {
-  const { usunieto } = await searchParams;
+  const { usunieto, oceniono } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
@@ -72,6 +72,19 @@ export default async function ProfilPage({
           </p>
         )}
 
+        {oceniono === "1" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Dziękujemy — Twoja opinia została opublikowana.
+          </p>
+        )}
+
+        <Link
+          href={`/u/${session.user.id}`}
+          className="inline-flex font-bold text-green-700 hover:underline"
+        >
+          Zobacz swój publiczny profil i opinie →
+        </Link>
+
         <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -110,6 +123,7 @@ export default async function ProfilPage({
                     place={listing.location}
                     price={listing.price}
                     ownerName={listing.owner_name}
+                    ownerId={listing.owner_id}
                     showFavorite={false}
                     isReserved={Boolean(listing.is_reserved)}
                   />
@@ -165,6 +179,7 @@ export default async function ProfilPage({
                   place={listing.location}
                   price={listing.price}
                   ownerName={listing.owner_name}
+                  ownerId={listing.owner_id}
                   isFavorite
                   isReserved={Boolean(listing.is_reserved)}
                 />

@@ -81,6 +81,7 @@ export async function createReservation(formData: FormData): Promise<void> {
      WHERE listing_id = ?
        AND requester_id = ?
        AND status IN ('pending', 'accepted')
+       AND completed_at IS NULL
        AND end_date >= date('now')
      LIMIT 1`,
   )
@@ -96,6 +97,7 @@ export async function createReservation(formData: FormData): Promise<void> {
      FROM reservations
      WHERE listing_id = ?
        AND status = 'accepted'
+       AND completed_at IS NULL
        AND start_date <= ?
        AND end_date >= ?
      LIMIT 1`,
@@ -218,6 +220,7 @@ export async function cancelReservation(formData: FormData): Promise<void> {
      FROM reservations
      WHERE id = ? AND requester_id = ?
        AND status IN ('pending', 'accepted')
+       AND completed_at IS NULL
      LIMIT 1`,
   )
     .bind(reservationId, session.user.id)
@@ -233,6 +236,47 @@ export async function cancelReservation(formData: FormData): Promise<void> {
      WHERE id = ? AND requester_id = ?`,
   )
     .bind(reservationId, session.user.id)
+    .run();
+
+  revalidateReservationPages(reservation.listing_id);
+  redirect("/profil#rezerwacje");
+}
+
+export async function completeReservation(formData: FormData): Promise<void> {
+  const reservationId = positiveInteger(formData.get("reservation_id"));
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session) {
+    redirect("/logowanie?redirect=/profil#rezerwacje");
+  }
+
+  if (!reservationId) {
+    throw new Error("Nieprawidłowa rezerwacja.");
+  }
+
+  const { env } = await getCloudflareContext({ async: true });
+  const reservation = await env.DB.prepare(
+    `SELECT listing_id
+     FROM reservations
+     WHERE id = ?
+       AND status = 'accepted'
+       AND completed_at IS NULL
+       AND (requester_id = ? OR owner_id = ?)
+     LIMIT 1`,
+  )
+    .bind(reservationId, session.user.id, session.user.id)
+    .first<{ listing_id: number }>();
+
+  if (!reservation) {
+    throw new Error("Nie można zakończyć tej rezerwacji.");
+  }
+
+  await env.DB.prepare(
+    `UPDATE reservations
+     SET completed_at = datetime('now'), updated_at = datetime('now')
+     WHERE id = ? AND completed_at IS NULL`,
+  )
+    .bind(reservationId)
     .run();
 
   revalidateReservationPages(reservation.listing_id);

@@ -40,6 +40,7 @@ export default async function Sprzet() {
   place={listing.location}
   price={listing.price}
   ownerName={listing.owner_name}
+  ownerId={listing.owner_id}
   isFavorite={favoriteIds.has(listing.id)}
   isReserved={Boolean(listing.is_reserved)}
 />

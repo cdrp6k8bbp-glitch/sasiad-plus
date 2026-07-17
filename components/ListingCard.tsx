@@ -11,6 +11,7 @@ type ListingProps = {
   price: string;
   subcategory?: string | null;
   ownerName?: string | null;
+  ownerId?: string | null;
   isFavorite?: boolean;
   showFavorite?: boolean;
   isReserved?: boolean;
@@ -32,6 +33,7 @@ export default function ListingCard({
   price,
   subcategory,
   ownerName,
+  ownerId,
   isFavorite = false,
   showFavorite = true,
   isReserved = false,
@@ -92,7 +94,7 @@ export default function ListingCard({
           </Link>
         </div>
 
-        <OwnerSummary compact ownerName={ownerName} />
+        <OwnerSummary compact ownerId={ownerId} ownerName={ownerName} />
       </div>
     </article>
   );

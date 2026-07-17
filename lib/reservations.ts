@@ -18,6 +18,8 @@ export type Reservation = {
   end_date: string;
   note: string | null;
   status: ReservationStatus;
+  completed_at: string | null;
+  review_id: number | null;
   created_at: string;
 };
 
@@ -33,6 +35,13 @@ const RESERVATION_COLUMNS = `
   reservations.end_date,
   reservations.note,
   reservations.status,
+  reservations.completed_at,
+  (
+    SELECT reviews.id
+    FROM reviews
+    WHERE reviews.reservation_id = reservations.id
+    LIMIT 1
+  ) AS review_id,
   reservations.created_at
 `;
 
@@ -88,6 +97,7 @@ export async function getActiveReservationForListingAndUser(
      WHERE reservations.listing_id = ?
        AND reservations.requester_id = ?
        AND reservations.status IN ('pending', 'accepted')
+       AND reservations.completed_at IS NULL
        AND reservations.end_date >= date('now')
      ORDER BY reservations.created_at DESC
      LIMIT 1`,

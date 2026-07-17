@@ -1,6 +1,11 @@
+import Link from "next/link";
+
 type OwnerSummaryProps = {
   compact?: boolean;
+  ownerId?: string | null;
   ownerName?: string | null;
+  rating?: number | null;
+  reviewCount?: number;
 };
 
 function initials(name: string): string {
@@ -14,7 +19,10 @@ function initials(name: string): string {
 
 export default function OwnerSummary({
   compact = false,
+  ownerId,
   ownerName,
+  rating,
+  reviewCount = 0,
 }: OwnerSummaryProps) {
   const displayName = ownerName ?? "Ogłoszenie społeczności";
   const ownerInitials = ownerName ? initials(ownerName) : "S+";
@@ -28,9 +36,18 @@ export default function OwnerSummary({
           </div>
 
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900">
-              {displayName}
-            </p>
+            {ownerId ? (
+              <Link
+                href={`/u/${ownerId}`}
+                className="block truncate text-sm font-bold text-slate-900 hover:text-green-700"
+              >
+                {displayName}
+              </Link>
+            ) : (
+              <p className="truncate text-sm font-bold text-slate-900">
+                {displayName}
+              </p>
+            )}
             <p className="truncate text-xs font-semibold text-emerald-700">
               {ownerName ? "🟢 Nowy Sąsiad" : "Starsze ogłoszenie"}
             </p>
@@ -50,7 +67,16 @@ export default function OwnerSummary({
         </div>
 
         <div>
-          <p className="text-lg font-black text-slate-900">{displayName}</p>
+          {ownerId ? (
+            <Link
+              href={`/u/${ownerId}`}
+              className="text-lg font-black text-slate-900 hover:text-green-700"
+            >
+              {displayName}
+            </Link>
+          ) : (
+            <p className="text-lg font-black text-slate-900">{displayName}</p>
+          )}
           <p className="mt-1 text-sm font-bold text-emerald-700">
             {ownerName ? "🟢 Nowy Sąsiad" : "Starsze ogłoszenie"}
           </p>
@@ -65,7 +91,11 @@ export default function OwnerSummary({
 
         <div className="rounded-2xl bg-slate-50 p-3">
           <dt className="text-slate-500">Ocena</dt>
-          <dd className="mt-1 font-bold">—</dd>
+          <dd className="mt-1 font-bold">
+            {rating !== null && rating !== undefined
+              ? `⭐ ${rating.toFixed(1)} (${reviewCount})`
+              : "Brak ocen"}
+          </dd>
         </div>
 
         <div className="col-span-2 rounded-2xl bg-green-50 p-3 text-green-900">
@@ -75,6 +105,15 @@ export default function OwnerSummary({
           </dd>
         </div>
       </dl>
+
+      {ownerId && (
+        <Link
+          href={`/u/${ownerId}`}
+          className="mt-4 inline-flex font-bold text-green-700 hover:underline"
+        >
+          Zobacz profil i opinie →
+        </Link>
+      )}
     </section>
   );
 }

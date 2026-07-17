@@ -35,6 +35,7 @@ const LISTING_COLUMNS = `
     FROM reservations
     WHERE reservations.listing_id = listings.id
       AND reservations.status = 'accepted'
+      AND reservations.completed_at IS NULL
       AND reservations.end_date >= date('now')
   ) AS is_reserved,
   "user".name AS owner_name
