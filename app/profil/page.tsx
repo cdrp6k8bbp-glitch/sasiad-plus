@@ -5,6 +5,8 @@ import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import ListingOwnerActions from "@/components/ListingOwnerActions";
 import ProfileHeader from "@/components/profile/ProfileHeader";
+import TrustPanel from "@/components/profile/TrustPanel";
+import UserStats from "@/components/profile/UserStats";
 import ReservationCard from "@/components/ReservationCard";
 import { auth } from "@/lib/auth";
 import {
@@ -15,6 +17,7 @@ import {
   getReservationsForOwner,
   getReservationsForRequester,
 } from "@/lib/reservations";
+import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
 
 export default async function ProfilPage({
   searchParams,
@@ -33,12 +36,15 @@ export default async function ProfilPage({
     favoriteListings,
     incomingReservations,
     requestedReservations,
+    trustStats,
   ] = await Promise.all([
     getListingsByOwner(session.user.id),
     getFavoriteListingsByUser(session.user.id),
     getReservationsForOwner(session.user.id),
     getReservationsForRequester(session.user.id),
+    getUserTrustStats(session.user.id),
   ]);
+  const trustLevel = getTrustLevel(trustStats);
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-16 text-slate-900">
@@ -64,7 +70,17 @@ export default async function ProfilPage({
           name={session.user.name}
           email={session.user.email}
           createdAt={new Date(session.user.createdAt)}
+          trustLevel={trustLevel}
         />
+
+        <UserStats
+          activeListings={trustStats.activeListings}
+          completedTotal={trustStats.completedTotal}
+          reviewCount={trustStats.reviewCount}
+          joinedYear={new Date(session.user.createdAt).getFullYear()}
+        />
+
+        <TrustPanel level={trustLevel} stats={trustStats} />
 
         {usunieto === "1" && (
           <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">

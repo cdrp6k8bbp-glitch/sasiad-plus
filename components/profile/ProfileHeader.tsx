@@ -1,12 +1,19 @@
 import TrustBadge from "./TrustBadge";
+import type { TrustLevel } from "@/lib/trust";
 
 type ProfileHeaderProps = {
   name: string;
   email: string;
   createdAt: Date;
+  trustLevel: TrustLevel;
 };
 
-export default function ProfileHeader({ name, email, createdAt }: ProfileHeaderProps) {
+export default function ProfileHeader({
+  name,
+  email,
+  createdAt,
+  trustLevel,
+}: ProfileHeaderProps) {
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -42,7 +49,7 @@ export default function ProfileHeader({ name, email, createdAt }: ProfileHeaderP
               </p>
             </div>
 
-            <TrustBadge level="Nowy Sąsiad" />
+            <TrustBadge level={trustLevel} />
           </div>
         </div>
       </div>

@@ -1,8 +1,4 @@
-type TrustLevel =
-  | "Nowy Sąsiad"
-  | "Zweryfikowany Sąsiad"
-  | "Zaufany Sąsiad"
-  | "Ambasador Sąsiedztwa";
+import type { TrustLevel } from "@/lib/trust";
 
 const styles: Record<TrustLevel, string> = {
   "Nowy Sąsiad": "bg-emerald-50 text-emerald-700 ring-emerald-200",

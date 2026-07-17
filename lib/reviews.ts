@@ -3,7 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 export type PublicUser = {
   id: string;
   name: string;
-  created_at: string;
+  created_at: string | number;
 };
 
 export type Review = {

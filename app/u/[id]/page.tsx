@@ -3,6 +3,9 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
+import TrustBadge from "@/components/profile/TrustBadge";
+import TrustPanel from "@/components/profile/TrustPanel";
+import UserStats from "@/components/profile/UserStats";
 import { auth } from "@/lib/auth";
 import {
   getFavoriteListingIds,
@@ -13,6 +16,7 @@ import {
   getReviewsForUser,
   getReviewSummary,
 } from "@/lib/reviews";
+import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
 
 function initials(name: string): string {
   return name
@@ -23,7 +27,7 @@ function initials(name: string): string {
     .join("");
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string | number): string {
   return new Intl.DateTimeFormat("pl-PL", {
     month: "long",
     year: "numeric",
@@ -36,12 +40,13 @@ export default async function PublicProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [user, reviews, summary, listings, session] = await Promise.all([
+  const [user, reviews, summary, listings, session, trustStats] = await Promise.all([
     getPublicUser(id),
     getReviewsForUser(id),
     getReviewSummary(id),
     getListingsByOwner(id),
     auth.api.getSession({ headers: await headers() }),
+    getUserTrustStats(id),
   ]);
 
   if (!user) {
@@ -51,6 +56,7 @@ export default async function PublicProfilePage({
   const favoriteIds = new Set(
     session ? await getFavoriteListingIds(session.user.id) : [],
   );
+  const trustLevel = getTrustLevel(trustStats);
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-16 text-slate-900">
@@ -72,8 +78,11 @@ export default async function PublicProfilePage({
           <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-600 to-emerald-400 text-3xl font-black text-white">
             {initials(user.name) || "S+"}
           </div>
-          <div>
-            <p className="font-semibold text-green-700">Profil sąsiada</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <p className="font-semibold text-green-700">Profil sąsiada</p>
+              <TrustBadge level={trustLevel} />
+            </div>
             <h1 className="mt-1 text-4xl font-black">{user.name}</h1>
             <p className="mt-2 text-slate-500">
               🏡 W Sąsiad+ od {formatDate(user.created_at)}
@@ -85,6 +94,15 @@ export default async function PublicProfilePage({
             </p>
           </div>
         </section>
+
+        <UserStats
+          activeListings={trustStats.activeListings}
+          completedTotal={trustStats.completedTotal}
+          reviewCount={trustStats.reviewCount}
+          joinedYear={new Date(user.created_at).getFullYear()}
+        />
+
+        <TrustPanel level={trustLevel} stats={trustStats} />
 
         <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <h2 className="text-3xl font-black">Opinie sąsiadów</h2>

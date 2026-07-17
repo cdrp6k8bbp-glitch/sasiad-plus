@@ -1,11 +1,23 @@
-const stats = [
-  { value: "12", label: "Ogłoszeń" },
-  { value: "43", label: "Udanych wypożyczeń" },
-  { value: "18", label: "Pomocy sąsiedzkich" },
-  { value: "2026", label: "Na Sąsiad+" },
-];
+type UserStatsProps = {
+  activeListings: number;
+  completedTotal: number;
+  reviewCount: number;
+  joinedYear: number;
+};
 
-export default function UserStats() {
+export default function UserStats({
+  activeListings,
+  completedTotal,
+  reviewCount,
+  joinedYear,
+}: UserStatsProps) {
+  const stats = [
+    { value: activeListings, label: "Aktywnych ogłoszeń" },
+    { value: completedTotal, label: "Udanych transakcji" },
+    { value: reviewCount, label: "Otrzymanych opinii" },
+    { value: joinedYear, label: "Na Sąsiad+ od" },
+  ];
+
   return (
     <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {stats.map((stat) => (
