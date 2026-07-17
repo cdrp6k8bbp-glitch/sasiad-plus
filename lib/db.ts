@@ -13,6 +13,7 @@ export type Listing = {
   image_keys: string | null;
   owner_id: string | null;
   owner_name: string | null;
+  is_reserved: number;
   created_at: string;
 };
 
@@ -29,6 +30,13 @@ const LISTING_COLUMNS = `
   listings.image_keys,
   listings.owner_id,
   listings.created_at,
+  EXISTS (
+    SELECT 1
+    FROM reservations
+    WHERE reservations.listing_id = listings.id
+      AND reservations.status = 'accepted'
+      AND reservations.end_date >= date('now')
+  ) AS is_reserved,
   "user".name AS owner_name
 `;
 

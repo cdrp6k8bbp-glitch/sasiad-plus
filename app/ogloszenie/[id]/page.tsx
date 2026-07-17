@@ -10,6 +10,11 @@ import { startConversation } from "@/app/wiadomosci/actions";
 import ListingOwnerActions from "@/components/ListingOwnerActions";
 import FavoriteButton from "@/components/FavoriteButton";
 import { getFavoriteListingIds } from "@/lib/db";
+import {
+  cancelReservation,
+  createReservation,
+} from "@/app/rezerwacje/actions";
+import { getActiveReservationForListingAndUser } from "@/lib/reservations";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -27,10 +32,10 @@ export default async function ListingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ zapisano?: string }>;
+  searchParams: Promise<{ zapisano?: string; rezerwacja?: string }>;
 }) {
   const { id } = await params;
-  const { zapisano } = await searchParams;
+  const { zapisano, rezerwacja } = await searchParams;
   const listingId = Number(id);
 
   if (!Number.isInteger(listingId) || listingId < 1) {
@@ -48,6 +53,12 @@ export default async function ListingPage({
   const isFavorite = session
     ? (await getFavoriteListingIds(session.user.id)).includes(listing.id)
     : false;
+  const activeReservation = session && !isOwner
+    ? await getActiveReservationForListingAndUser(
+        listing.id,
+        session.user.id,
+      )
+    : null;
   const imageKeys = parseListingImageKeys(
     listing.image_keys,
     listing.image_key,
@@ -78,6 +89,12 @@ export default async function ListingPage({
         {zapisano === "1" && (
           <p className="mt-6 rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
             ✓ Zmiany w ogłoszeniu zostały zapisane.
+          </p>
+        )}
+
+        {rezerwacja === "wyslana" && (
+          <p className="mt-6 rounded-2xl bg-blue-100 px-5 py-4 font-bold text-blue-800">
+            ✓ Prośba o rezerwację została wysłana do właściciela.
           </p>
         )}
 
@@ -121,10 +138,20 @@ export default async function ListingPage({
                 {listing.price}
               </p>
 
-              <div className="mt-6 rounded-2xl bg-green-50 p-4 text-green-800">
-                <p className="font-bold">🟢 Dostępne</p>
+              <div
+                className={`mt-6 rounded-2xl p-4 ${
+                  listing.is_reserved
+                    ? "bg-amber-50 text-amber-800"
+                    : "bg-green-50 text-green-800"
+                }`}
+              >
+                <p className="font-bold">
+                  {listing.is_reserved
+                    ? "📅 Niektóre terminy są zarezerwowane"
+                    : "🟢 Dostępne"}
+                </p>
                 <p className="mt-1 text-sm">
-                  Ustal termin bezpośrednio z właścicielem.
+                  Wybierz termin i wyślij prośbę do właściciela.
                 </p>
               </div>
 
@@ -159,6 +186,96 @@ export default async function ListingPage({
                   initialIsFavorite={isFavorite}
                   wide
                 />
+              )}
+
+              {listing.owner_id && !isOwner && (
+                <div className="mt-6 border-t border-slate-200 pt-6">
+                  <h2 className="text-xl font-black">Zarezerwuj termin</h2>
+
+                  {!session ? (
+                    <Link
+                      href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
+                      className="mt-4 flex w-full items-center justify-center rounded-2xl border border-blue-200 px-5 py-3 font-bold text-blue-700 hover:bg-blue-50"
+                    >
+                      Zaloguj się, aby zarezerwować
+                    </Link>
+                  ) : activeReservation ? (
+                    <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-blue-900">
+                      <p className="font-black">
+                        {activeReservation.status === "accepted"
+                          ? "✓ Rezerwacja zaakceptowana"
+                          : "⏳ Prośba oczekuje na odpowiedź"}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold">
+                        {activeReservation.start_date} – {activeReservation.end_date}
+                      </p>
+                      <form action={cancelReservation} className="mt-3">
+                        <input
+                          type="hidden"
+                          name="reservation_id"
+                          value={activeReservation.id}
+                        />
+                        <button
+                          type="submit"
+                          className="text-sm font-bold text-red-700 hover:underline"
+                        >
+                          Anuluj rezerwację
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
+                    <form action={createReservation} className="mt-4 space-y-3">
+                      <input type="hidden" name="listing_id" value={listing.id} />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="start_date" className="text-sm font-bold text-slate-700">
+                            Od
+                          </label>
+                          <input
+                            id="start_date"
+                            name="start_date"
+                            type="date"
+                            min={new Date().toISOString().slice(0, 10)}
+                            required
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="end_date" className="text-sm font-bold text-slate-700">
+                            Do
+                          </label>
+                          <input
+                            id="end_date"
+                            name="end_date"
+                            type="date"
+                            min={new Date().toISOString().slice(0, 10)}
+                            required
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="reservation_note" className="text-sm font-bold text-slate-700">
+                          Wiadomość (opcjonalnie)
+                        </label>
+                        <textarea
+                          id="reservation_note"
+                          name="note"
+                          rows={3}
+                          maxLength={500}
+                          placeholder="Np. odbiór po godzinie 17"
+                          className="mt-1 w-full resize-none rounded-xl border border-slate-300 p-3"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full rounded-2xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800"
+                      >
+                        Wyślij prośbę o rezerwację
+                      </button>
+                    </form>
+                  )}
+                </div>
               )}
 
               <div className="mt-6 border-t border-slate-200 pt-6">

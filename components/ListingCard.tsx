@@ -13,6 +13,7 @@ type ListingProps = {
   ownerName?: string | null;
   isFavorite?: boolean;
   showFavorite?: boolean;
+  isReserved?: boolean;
 };
 
 function imageUrl(imageKey: string): string {
@@ -33,6 +34,7 @@ export default function ListingCard({
   ownerName,
   isFavorite = false,
   showFavorite = true,
+  isReserved = false,
 }: ListingProps) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
@@ -57,8 +59,12 @@ export default function ListingCard({
           />
         )}
 
-        <span className="absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-green-700 shadow">
-          Dostępne
+        <span
+          className={`absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1 text-xs font-bold shadow ${
+            isReserved ? "text-amber-700" : "text-green-700"
+          }`}
+        >
+          {isReserved ? "📅 Ma rezerwację" : "Dostępne"}
         </span>
       </div>
 

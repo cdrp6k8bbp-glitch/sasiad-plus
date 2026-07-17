@@ -41,6 +41,7 @@ export default async function Uslugi() {
               price={listing.price}
               ownerName={listing.owner_name}
               isFavorite={favoriteIds.has(listing.id)}
+              isReserved={Boolean(listing.is_reserved)}
             />
           ))}
         </div>

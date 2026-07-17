@@ -5,11 +5,16 @@ import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import ListingOwnerActions from "@/components/ListingOwnerActions";
 import ProfileHeader from "@/components/profile/ProfileHeader";
+import ReservationCard from "@/components/ReservationCard";
 import { auth } from "@/lib/auth";
 import {
   getFavoriteListingsByUser,
   getListingsByOwner,
 } from "@/lib/db";
+import {
+  getReservationsForOwner,
+  getReservationsForRequester,
+} from "@/lib/reservations";
 
 export default async function ProfilPage({
   searchParams,
@@ -23,9 +28,16 @@ export default async function ProfilPage({
     redirect("/logowanie?redirect=/profil");
   }
 
-  const [listings, favoriteListings] = await Promise.all([
+  const [
+    listings,
+    favoriteListings,
+    incomingReservations,
+    requestedReservations,
+  ] = await Promise.all([
     getListingsByOwner(session.user.id),
     getFavoriteListingsByUser(session.user.id),
+    getReservationsForOwner(session.user.id),
+    getReservationsForRequester(session.user.id),
   ]);
 
   return (
@@ -99,6 +111,7 @@ export default async function ProfilPage({
                     price={listing.price}
                     ownerName={listing.owner_name}
                     showFavorite={false}
+                    isReserved={Boolean(listing.is_reserved)}
                   />
                   <ListingOwnerActions listingId={listing.id} compact />
                 </div>
@@ -153,10 +166,66 @@ export default async function ProfilPage({
                   price={listing.price}
                   ownerName={listing.owner_name}
                   isFavorite
+                  isReserved={Boolean(listing.is_reserved)}
                 />
               ))}
             </div>
           )}
+        </section>
+
+        <section
+          id="rezerwacje"
+          className="scroll-mt-6 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+        >
+          <p className="font-semibold text-blue-700">Terminy i prośby</p>
+          <h2 className="mt-1 text-3xl font-black tracking-tight">
+            Rezerwacje
+          </h2>
+
+          <div className="mt-7 grid gap-8 lg:grid-cols-2">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xl font-black">Prośby do Ciebie</h3>
+                <span className="text-sm font-semibold text-slate-500">
+                  {incomingReservations.filter((item) => item.status === "pending").length} nowych
+                </span>
+              </div>
+              {incomingReservations.length === 0 ? (
+                <p className="mt-4 rounded-2xl bg-slate-50 p-5 text-slate-500">
+                  Nie masz jeszcze próśb o rezerwację.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {incomingReservations.map((reservation) => (
+                    <ReservationCard
+                      key={reservation.id}
+                      reservation={reservation}
+                      perspective="owner"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-xl font-black">Twoje rezerwacje</h3>
+              {requestedReservations.length === 0 ? (
+                <p className="mt-4 rounded-2xl bg-slate-50 p-5 text-slate-500">
+                  Nie wysłano jeszcze żadnej prośby o termin.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {requestedReservations.map((reservation) => (
+                    <ReservationCard
+                      key={reservation.id}
+                      reservation={reservation}
+                      perspective="requester"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </section>
 
         <Link

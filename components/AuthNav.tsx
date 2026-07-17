@@ -79,6 +79,13 @@ export default function AuthNav() {
       </Link>
 
       <Link
+        href="/profil#rezerwacje"
+        className="hidden rounded-full px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-50 xl:inline-flex"
+      >
+        Rezerwacje
+      </Link>
+
+      <Link
         href="/wiadomosci"
         aria-label={
           unreadCount > 0
