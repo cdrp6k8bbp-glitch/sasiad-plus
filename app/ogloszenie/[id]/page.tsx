@@ -51,6 +51,7 @@ export default async function ListingPage({
 
   const session = await auth.api.getSession({ headers: await headers() });
   const isOwner = session?.user.id === listing.owner_id;
+  const isArchived = Boolean(listing.archived_at);
   const isFavorite = session
     ? (await getFavoriteListingIds(session.user.id)).includes(listing.id)
     : false;
@@ -102,6 +103,13 @@ export default async function ListingPage({
           </p>
         )}
 
+        {isArchived && (
+          <p className="mt-6 rounded-2xl border border-slate-200 bg-slate-100 px-5 py-4 font-bold text-slate-700">
+            📦 To ogłoszenie znajduje się w archiwum. Nie przyjmuje nowych
+            wiadomości ani rezerwacji.
+          </p>
+        )}
+
         <div className="mt-7 grid gap-8 lg:grid-cols-[1.5fr_0.8fr]">
           <section>
             {imageKeys.length > 0 ? (
@@ -144,18 +152,24 @@ export default async function ListingPage({
 
               <div
                 className={`mt-6 rounded-2xl p-4 ${
-                  listing.is_reserved
+                  isArchived
+                    ? "bg-slate-100 text-slate-700"
+                    : listing.is_reserved
                     ? "bg-amber-50 text-amber-800"
                     : "bg-green-50 text-green-800"
                 }`}
               >
                 <p className="font-bold">
-                  {listing.is_reserved
+                  {isArchived
+                    ? "📦 Ogłoszenie zarchiwizowane"
+                    : listing.is_reserved
                     ? "📅 Niektóre terminy są zarezerwowane"
                     : "🟢 Dostępne"}
                 </p>
                 <p className="mt-1 text-sm">
-                  Wybierz termin i wyślij prośbę do właściciela.
+                  {isArchived
+                    ? "Właściciel może je ponownie przywrócić."
+                    : "Wybierz termin i wyślij prośbę do właściciela."}
                 </p>
               </div>
 
@@ -164,7 +178,14 @@ export default async function ListingPage({
                   Kontakt jest niedostępny dla starszego ogłoszenia.
                 </p>
               ) : isOwner ? (
-                <ListingOwnerActions listingId={listing.id} />
+                <ListingOwnerActions
+                  listingId={listing.id}
+                  isArchived={isArchived}
+                />
+              ) : isArchived ? (
+                <p className="mt-6 rounded-2xl bg-slate-100 p-4 text-center text-sm font-semibold text-slate-600">
+                  Kontakt dla tego ogłoszenia jest obecnie wyłączony.
+                </p>
               ) : !session ? (
                 <Link
                   href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
@@ -184,7 +205,7 @@ export default async function ListingPage({
                 </form>
               )}
 
-              {!isOwner && (
+              {!isOwner && !isArchived && (
                 <FavoriteButton
                   listingId={listing.id}
                   initialIsFavorite={isFavorite}
@@ -192,7 +213,7 @@ export default async function ListingPage({
                 />
               )}
 
-              {listing.owner_id && !isOwner && (
+              {listing.owner_id && !isOwner && !isArchived && (
                 <div className="mt-6 border-t border-slate-200 pt-6">
                   <h2 className="text-xl font-black">Zarezerwuj termin</h2>
 

@@ -23,7 +23,10 @@ export async function setFavorite(
 
   if (shouldBeFavorite) {
     const listing = await env.DB.prepare(
-      `SELECT id FROM listings WHERE id = ? LIMIT 1`,
+      `SELECT id
+       FROM listings
+       WHERE id = ? AND archived_at IS NULL
+       LIMIT 1`,
     )
       .bind(listingId)
       .first<{ id: number }>();

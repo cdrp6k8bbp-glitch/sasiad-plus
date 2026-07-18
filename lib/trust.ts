@@ -43,7 +43,11 @@ export async function getUserTrustStats(userId: string): Promise<TrustStats> {
   const { env } = await getCloudflareContext({ async: true });
   const result = await env.DB.prepare(
     `SELECT
-       (SELECT COUNT(*) FROM listings WHERE owner_id = ?) AS active_listings,
+       (
+         SELECT COUNT(*)
+         FROM listings
+         WHERE owner_id = ? AND archived_at IS NULL
+       ) AS active_listings,
        (
          SELECT COUNT(*)
          FROM reservations

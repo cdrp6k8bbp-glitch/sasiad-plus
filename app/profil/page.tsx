@@ -24,12 +24,13 @@ export default async function ProfilPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    usunieto?: string;
+    zarchiwizowano?: string;
+    przywrocono?: string;
     oceniono?: string;
     zapisano?: string;
   }>;
 }) {
-  const { usunieto, oceniono, zapisano } = await searchParams;
+  const { zarchiwizowano, przywrocono, oceniono, zapisano } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
@@ -44,7 +45,7 @@ export default async function ProfilPage({
     trustStats,
     profileDetails,
   ] = await Promise.all([
-    getListingsByOwner(session.user.id),
+    getListingsByOwner(session.user.id, true),
     getFavoriteListingsByUser(session.user.id),
     getReservationsForOwner(session.user.id),
     getReservationsForRequester(session.user.id),
@@ -91,9 +92,15 @@ export default async function ProfilPage({
 
         <TrustPanel level={trustLevel} stats={trustStats} />
 
-        {usunieto === "1" && (
+        {zarchiwizowano === "1" && (
           <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
-            ✓ Ogłoszenie zostało usunięte.
+            ✓ Ogłoszenie zostało przeniesione do archiwum.
+          </p>
+        )}
+
+        {przywrocono === "1" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Ogłoszenie zostało przywrócone.
           </p>
         )}
 
@@ -126,7 +133,8 @@ export default async function ProfilPage({
             </div>
 
             <span className="text-sm font-semibold text-slate-500">
-              {listings.length} {listings.length === 1 ? "ogłoszenie" : "ogłoszeń"}
+              {listings.filter((listing) => !listing.archived_at).length} aktywnych ·{" "}
+              {listings.filter((listing) => listing.archived_at).length} w archiwum
             </span>
           </div>
 
@@ -157,8 +165,13 @@ export default async function ProfilPage({
                     ownerId={listing.owner_id}
                     showFavorite={false}
                     isReserved={Boolean(listing.is_reserved)}
+                    isArchived={Boolean(listing.archived_at)}
                   />
-                  <ListingOwnerActions listingId={listing.id} compact />
+                  <ListingOwnerActions
+                    listingId={listing.id}
+                    compact
+                    isArchived={Boolean(listing.archived_at)}
+                  />
                 </div>
               ))}
             </div>

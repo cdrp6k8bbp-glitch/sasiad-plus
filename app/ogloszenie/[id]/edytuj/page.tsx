@@ -33,6 +33,10 @@ export default async function EditListingPage({
     notFound();
   }
 
+  if (listing.archived_at) {
+    redirect("/profil");
+  }
+
   const imageKeys = parseListingImageKeys(
     listing.image_keys,
     listing.image_key,

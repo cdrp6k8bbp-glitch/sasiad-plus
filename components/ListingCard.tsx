@@ -15,6 +15,7 @@ type ListingProps = {
   isFavorite?: boolean;
   showFavorite?: boolean;
   isReserved?: boolean;
+  isArchived?: boolean;
 };
 
 function imageUrl(imageKey: string): string {
@@ -37,9 +38,14 @@ export default function ListingCard({
   isFavorite = false,
   showFavorite = true,
   isReserved = false,
+  isArchived = false,
 }: ListingProps) {
   return (
-    <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <article
+      className={`group overflow-hidden rounded-3xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
+        isArchived ? "border-slate-300 opacity-75" : "border-slate-200"
+      }`}
+    >
       <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
         {imageKey ? (
           <img
@@ -63,10 +69,18 @@ export default function ListingCard({
 
         <span
           className={`absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1 text-xs font-bold shadow ${
-            isReserved ? "text-amber-700" : "text-green-700"
+            isArchived
+              ? "text-slate-700"
+              : isReserved
+                ? "text-amber-700"
+                : "text-green-700"
           }`}
         >
-          {isReserved ? "📅 Ma rezerwację" : "Dostępne"}
+          {isArchived
+            ? "📦 W archiwum"
+            : isReserved
+              ? "📅 Ma rezerwację"
+              : "Dostępne"}
         </span>
       </div>
 
@@ -90,7 +104,7 @@ export default function ListingCard({
             href={`/ogloszenie/${id}`}
             className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-green-700"
           >
-            Zobacz
+            {isArchived ? "Podgląd" : "Zobacz"}
           </Link>
         </div>
 

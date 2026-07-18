@@ -31,7 +31,10 @@ export async function startConversation(formData: FormData): Promise<void> {
 
   const { env } = await getCloudflareContext({ async: true });
   const listing = await env.DB.prepare(
-    `SELECT owner_id FROM listings WHERE id = ? LIMIT 1`,
+    `SELECT owner_id
+     FROM listings
+     WHERE id = ? AND archived_at IS NULL
+     LIMIT 1`,
   )
     .bind(listingId)
     .first<{ owner_id: string | null }>();

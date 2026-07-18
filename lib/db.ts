@@ -14,6 +14,7 @@ export type Listing = {
   owner_id: string | null;
   owner_name: string | null;
   is_reserved: number;
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -29,6 +30,7 @@ const LISTING_COLUMNS = `
   listings.image_key,
   listings.image_keys,
   listings.owner_id,
+  listings.archived_at,
   listings.created_at,
   EXISTS (
     SELECT 1
@@ -58,7 +60,8 @@ export async function getListings(
     const result = await env.DB.prepare(
       `SELECT ${LISTING_COLUMNS}
        ${LISTING_SOURCE}
-       WHERE listings.category IN (${placeholders})
+       WHERE listings.archived_at IS NULL
+         AND listings.category IN (${placeholders})
        ORDER BY listings.created_at DESC
        LIMIT ?`,
     )
@@ -72,7 +75,8 @@ export async function getListings(
     const result = await env.DB.prepare(
       `SELECT ${LISTING_COLUMNS}
        ${LISTING_SOURCE}
-       WHERE listings.category = ?
+       WHERE listings.archived_at IS NULL
+         AND listings.category = ?
        ORDER BY listings.created_at DESC
        LIMIT ?`,
     )
@@ -85,6 +89,7 @@ export async function getListings(
   const result = await env.DB.prepare(
     `SELECT ${LISTING_COLUMNS}
      ${LISTING_SOURCE}
+     WHERE listings.archived_at IS NULL
      ORDER BY listings.created_at DESC
      LIMIT ?`,
   )
@@ -94,13 +99,17 @@ export async function getListings(
   return result.results;
 }
 
-export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
+export async function getListingsByOwner(
+  ownerId: string,
+  includeArchived = false,
+): Promise<Listing[]> {
   const { env } = await getCloudflareContext({ async: true });
 
   const result = await env.DB.prepare(
     `SELECT ${LISTING_COLUMNS}
      ${LISTING_SOURCE}
      WHERE listings.owner_id = ?
+       ${includeArchived ? "" : "AND listings.archived_at IS NULL"}
      ORDER BY listings.created_at DESC`,
   )
     .bind(ownerId)
@@ -112,9 +121,11 @@ export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
 export async function getFavoriteListingIds(userId: string): Promise<number[]> {
   const { env } = await getCloudflareContext({ async: true });
   const result = await env.DB.prepare(
-    `SELECT listing_id
+    `SELECT favorite_listings.listing_id
      FROM favorite_listings
-     WHERE user_id = ?`,
+     JOIN listings ON listings.id = favorite_listings.listing_id
+     WHERE favorite_listings.user_id = ?
+       AND listings.archived_at IS NULL`,
   )
     .bind(userId)
     .all<{ listing_id: number }>();
@@ -132,6 +143,7 @@ export async function getFavoriteListingsByUser(
      INNER JOIN favorite_listings
        ON favorite_listings.listing_id = listings.id
      WHERE favorite_listings.user_id = ?
+       AND listings.archived_at IS NULL
      ORDER BY favorite_listings.created_at DESC`,
   )
     .bind(userId)

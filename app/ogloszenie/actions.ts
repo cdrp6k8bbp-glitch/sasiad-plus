@@ -16,6 +16,7 @@ type CurrentListing = {
   owner_id: string | null;
   image_key: string | null;
   image_keys: string | null;
+  archived_at: string | null;
 };
 
 function positiveInteger(value: FormDataEntryValue | null): number | null {
@@ -102,7 +103,7 @@ export async function updateListing(
 
   const { env } = await getCloudflareContext({ async: true });
   const currentListing = await env.DB.prepare(
-    `SELECT owner_id, image_key, image_keys
+    `SELECT owner_id, image_key, image_keys, archived_at
      FROM listings
      WHERE id = ?
      LIMIT 1`,
@@ -112,6 +113,10 @@ export async function updateListing(
 
   if (!currentListing || currentListing.owner_id !== session.user.id) {
     throw new Error("Nie masz dostępu do edycji tego ogłoszenia.");
+  }
+
+  if (currentListing.archived_at) {
+    throw new Error("Przywróć ogłoszenie przed jego edycją.");
   }
 
   const currentImageKeys = parseListingImageKeys(
@@ -188,7 +193,7 @@ export async function updateListing(
   redirect(`/ogloszenie/${listingId}?zapisano=1`);
 }
 
-export async function deleteListing(formData: FormData): Promise<void> {
+export async function archiveListing(formData: FormData): Promise<void> {
   const listingId = positiveInteger(formData.get("listing_id"));
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -202,7 +207,7 @@ export async function deleteListing(formData: FormData): Promise<void> {
 
   const { env } = await getCloudflareContext({ async: true });
   const listing = await env.DB.prepare(
-    `SELECT owner_id, image_key, image_keys
+    `SELECT owner_id, image_key, image_keys, archived_at
      FROM listings
      WHERE id = ?
      LIMIT 1`,
@@ -211,25 +216,46 @@ export async function deleteListing(formData: FormData): Promise<void> {
     .first<CurrentListing>();
 
   if (!listing || listing.owner_id !== session.user.id) {
-    throw new Error("Nie masz dostępu do usunięcia tego ogłoszenia.");
+    throw new Error("Nie masz dostępu do archiwizacji tego ogłoszenia.");
   }
 
-  const imageKeys = parseListingImageKeys(listing.image_keys, listing.image_key);
-
   await env.DB.prepare(
-    `DELETE FROM listings WHERE id = ? AND owner_id = ?`,
+    `UPDATE listings
+     SET archived_at = COALESCE(archived_at, datetime('now'))
+     WHERE id = ? AND owner_id = ?`,
   )
     .bind(listingId, session.user.id)
     .run();
 
-  try {
-    await Promise.all(
-      imageKeys.map((imageKey) => env.sasiad_plus_images.delete(imageKey)),
-    );
-  } catch (error) {
-    console.error("Nie udało się usunąć zdjęć ogłoszenia:", error);
+  revalidateListingPages(listingId);
+  redirect("/profil?zarchiwizowano=1");
+}
+
+export async function restoreListing(formData: FormData): Promise<void> {
+  const listingId = positiveInteger(formData.get("listing_id"));
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session) {
+    redirect("/logowanie?redirect=/profil");
+  }
+
+  if (!listingId) {
+    throw new Error("Nieprawidłowe ogłoszenie.");
+  }
+
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `UPDATE listings
+     SET archived_at = NULL
+     WHERE id = ? AND owner_id = ? AND archived_at IS NOT NULL`,
+  )
+    .bind(listingId, session.user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    throw new Error("Nie udało się przywrócić tego ogłoszenia.");
   }
 
   revalidateListingPages(listingId);
-  redirect("/profil?usunieto=1");
+  redirect("/profil?przywrocono=1");
 }
