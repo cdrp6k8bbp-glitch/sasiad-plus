@@ -19,6 +19,9 @@
 	"images": {
 		"binding": "IMAGES"
 	},
+	"cache": {
+		"enabled": true
+	},
 	"observability": {
 		"enabled": true
 	},
@@ -39,6 +42,9 @@
 		"staging": {
 			"name": "sasiad-plus-staging",
 			"workers_dev": true,
+			"cache": {
+				"enabled": true
+			},
 			"vars": {
 				"BETTER_AUTH_URL": "https://sasiad-plus-staging.t4pzthwd6z.workers.dev"
 			},

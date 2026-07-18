@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import OwnerSummary from "@/components/OwnerSummary";
 import FavoriteButton from "@/components/FavoriteButton";
 
@@ -48,11 +49,12 @@ export default function ListingCard({
     >
       <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
         {imageKey ? (
-          <img
+          <Image
             src={imageUrl(imageKey)}
             alt={title}
-            loading="lazy"
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            fill
+            sizes="(min-width: 1280px) 400px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, calc(100vw - 2rem)"
+            className="object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (
           <span className="text-7xl transition group-hover:scale-110">
