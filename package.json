@@ -10,6 +10,8 @@
     "dev": "next dev",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run db:migrations:smoke && npm run build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "deploy:staging": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env staging",
@@ -18,6 +20,7 @@
     "db:backup": "sh scripts/d1-backup.sh",
     "db:migrations:list": "wrangler d1 migrations list sasiad-plus-db --remote",
     "db:migrations:apply": "wrangler d1 migrations apply sasiad-plus-db --remote",
+    "db:migrations:smoke": "sh scripts/d1-migrations-smoke.sh",
     "db:staging:migrations:apply": "wrangler d1 migrations apply sasiad-plus-db-staging --remote --env staging"
   },
   "dependencies": {

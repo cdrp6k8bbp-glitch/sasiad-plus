@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sąsiad+
 
-## Getting Started
+[![Quality checks](https://github.com/cdrp6k8bbp-glitch/sasiad-plus/actions/workflows/quality.yml/badge.svg)](https://github.com/cdrp6k8bbp-glitch/sasiad-plus/actions/workflows/quality.yml)
 
-First, run the development server:
+Sąsiad+ to lokalna platforma wymiany usług i sprzętu między sąsiadami. Użytkownicy mogą publikować ogłoszenia, dodawać zdjęcia, wysyłać wiadomości, rezerwować terminy, zapisywać ulubione oferty i wystawiać oceny po zakończonej rezerwacji.
+
+## Środowiska
+
+- Produkcja: [sasiad-plus.t4pzthwd6z.workers.dev](https://sasiad-plus.t4pzthwd6z.workers.dev)
+- Staging: [sasiad-plus-staging.t4pzthwd6z.workers.dev](https://sasiad-plus-staging.t4pzthwd6z.workers.dev)
+
+Staging ma oddzielną bazę D1, magazyn zdjęć R2 i sekret uwierzytelniania. Dane testowe nie trafiają do produkcji.
+
+## Praca lokalna
+
+Projekt wymaga Node.js 22.
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Aplikacja będzie dostępna pod adresem [localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Kontrola jakości
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Pełny zestaw kontroli można uruchomić jednym poleceniem:
 
-## Learn More
+```bash
+npm run check
+```
 
-To learn more about Next.js, take a look at the following resources:
+Kontrola obejmuje ESLint, TypeScript, kompilację aplikacji oraz uruchomienie wszystkich migracji na nowej, tymczasowej lokalnej bazie D1. GitHub Actions wykonuje te same kroki automatycznie dla każdej zmiany kierowanej do gałęzi `main`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Cloudflare
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Wdrożenie środowiska testowego:
 
-## Deploy on Vercel
+```bash
+npm run db:staging:migrations:apply
+npm run deploy:staging
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Wdrożenie produkcyjne:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run db:backup
+npm run db:migrations:apply
+npm run deploy
+```
+
+Szczegółowa procedura bezpieczeństwa bazy znajduje się w [docs/database-operations.md](docs/database-operations.md).
