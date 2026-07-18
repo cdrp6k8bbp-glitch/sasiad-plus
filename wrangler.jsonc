@@ -34,5 +34,36 @@
 			"bucket_name": "sasiad-plus-images",
 			"binding": "sasiad_plus_images"
 		}
-	]
+	],
+	"env": {
+		"staging": {
+			"name": "sasiad-plus-staging",
+			"workers_dev": true,
+			"vars": {
+				"BETTER_AUTH_URL": "https://sasiad-plus-staging.t4pzthwd6z.workers.dev"
+			},
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "sasiad-plus-staging"
+				}
+			],
+			"images": {
+				"binding": "IMAGES"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "sasiad-plus-db-staging",
+					"database_id": "8ff61237-ee92-4be3-ad7b-ce40edb197f2"
+				}
+			],
+			"r2_buckets": [
+				{
+					"bucket_name": "sasiad-plus-images-staging",
+					"binding": "sasiad_plus_images"
+				}
+			]
+		}
+	}
 }

@@ -48,5 +48,8 @@ next-env.d.ts
 .dev.vars*
 !.dev.vars.example
 
+# local database backups
+/backups/
+
 !.env.example
 auth-cli.db
