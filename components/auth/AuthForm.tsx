@@ -28,6 +28,12 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
 
+    if (isRegister && password.length < 12) {
+      setError("Hasło musi mieć co najmniej 12 znaków.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const result = isRegister
         ? await signUp.email({
@@ -103,10 +109,17 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
           type="password"
           autoComplete={isRegister ? "new-password" : "current-password"}
           required
-          minLength={8}
+          minLength={isRegister ? 12 : 1}
+          maxLength={128}
           className={fieldClassName}
-          placeholder="Minimum 8 znaków"
+          placeholder={isRegister ? "Minimum 12 znaków" : "Twoje hasło"}
         />
+        {isRegister && (
+          <p className="mt-2 text-sm text-slate-500">
+            Użyj co najmniej 12 znaków. Najbezpieczniejsza będzie długa,
+            niepowtarzalna fraza.
+          </p>
+        )}
       </div>
 
       {error && (

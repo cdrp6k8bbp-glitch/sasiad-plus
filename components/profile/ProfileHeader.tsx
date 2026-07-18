@@ -64,6 +64,12 @@ export default function ProfileHeader({
               >
                 Edytuj profil
               </Link>
+              <Link
+                href="/profil/bezpieczenstwo"
+                className="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+              >
+                Bezpieczeństwo
+              </Link>
             </div>
           </div>
 
