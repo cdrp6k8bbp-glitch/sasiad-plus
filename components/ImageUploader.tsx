@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGES = 5;
@@ -249,10 +250,13 @@ export default function ImageUploader({
               className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
             >
               <div className="relative aspect-square">
-                <img
+                <Image
                   src={item.previewUrl}
                   alt={`Podgląd zdjęcia ${index + 1}`}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="(min-width: 640px) 33vw, 50vw"
+                  unoptimized={item.previewUrl.startsWith("blob:")}
+                  className="object-cover"
                 />
                 {index === 0 && (
                   <span className="absolute left-2 top-2 rounded-full bg-slate-900/80 px-2 py-1 text-[10px] font-bold uppercase text-white">

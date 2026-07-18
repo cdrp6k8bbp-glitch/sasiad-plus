@@ -5,6 +5,10 @@ initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  images: {
+    loader: "custom",
+    loaderFile: "./lib/cloudflare-image-loader.ts",
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "6mb",

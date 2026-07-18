@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 function imageUrl(imageKey: string): string {
   return `/api/images/${imageKey
@@ -34,10 +35,13 @@ export default function ListingGallery({
   return (
     <div>
       <div className="relative flex min-h-[360px] items-center justify-center overflow-hidden rounded-[36px] bg-gradient-to-br from-green-50 to-emerald-100 md:min-h-[500px]">
-        <img
+        <Image
           src={imageUrl(imageKeys[selectedIndex])}
           alt={`${title} — zdjęcie ${selectedIndex + 1}`}
-          className="h-full min-h-[360px] w-full object-cover md:min-h-[500px]"
+          fill
+          sizes="(min-width: 1280px) 600px, (min-width: 768px) 50vw, calc(100vw - 2rem)"
+          fetchPriority="high"
+          className="object-cover"
         />
 
         {hasMultipleImages && (
@@ -74,16 +78,18 @@ export default function ListingGallery({
               onClick={() => setSelectedIndex(index)}
               aria-label={`Pokaż zdjęcie ${index + 1}`}
               aria-current={selectedIndex === index}
-              className={`h-20 w-24 shrink-0 overflow-hidden rounded-2xl border-4 transition ${
+              className={`relative h-20 w-24 shrink-0 overflow-hidden rounded-2xl border-4 transition ${
                 selectedIndex === index
                   ? "border-green-600"
                   : "border-transparent opacity-70 hover:opacity-100"
               }`}
             >
-              <img
+              <Image
                 src={imageUrl(imageKey)}
                 alt=""
-                className="h-full w-full object-cover"
+                fill
+                sizes="96px"
+                className="object-cover"
               />
             </button>
           ))}
