@@ -19,6 +19,7 @@ import {
 } from "@/lib/reservations";
 import { getUserProfileDetails } from "@/lib/profiles";
 import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
+import { isCurrentUserAdmin } from "@/lib/admin";
 
 export default async function ProfilPage({
   searchParams,
@@ -44,6 +45,7 @@ export default async function ProfilPage({
     requestedReservations,
     trustStats,
     profileDetails,
+    isAdmin,
   ] = await Promise.all([
     getListingsByOwner(session.user.id, true),
     getFavoriteListingsByUser(session.user.id),
@@ -51,6 +53,7 @@ export default async function ProfilPage({
     getReservationsForRequester(session.user.id),
     getUserTrustStats(session.user.id),
     getUserProfileDetails(session.user.id),
+    isCurrentUserAdmin(session.user.email),
   ]);
   const trustLevel = getTrustLevel(trustStats);
 
@@ -122,6 +125,15 @@ export default async function ProfilPage({
         >
           Zobacz swój publiczny profil i opinie →
         </Link>
+
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="inline-flex rounded-full bg-slate-900 px-6 py-3 font-bold text-white hover:bg-slate-800"
+          >
+            🛡️ Otwórz panel moderacji
+          </Link>
+        )}
 
         <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
