@@ -31,6 +31,7 @@ schema_json="$(wrangler d1 execute sasiad-plus-db-staging \
     AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reservations')
     AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reviews')
     AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'notifications')
+    AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'listing_reports')
     AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rateLimit')
     AND EXISTS (SELECT 1 FROM pragma_table_info('listings') WHERE name = 'archived_at')
     AND EXISTS (SELECT 1 FROM pragma_table_info('messages') WHERE name = 'read_at')

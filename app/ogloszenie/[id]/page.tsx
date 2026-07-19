@@ -16,6 +16,7 @@ import {
 } from "@/app/rezerwacje/actions";
 import { getActiveReservationForListingAndUser } from "@/lib/reservations";
 import { getReviewSummary } from "@/lib/reviews";
+import { reportListing } from "@/app/zgloszenia/actions";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -33,10 +34,14 @@ export default async function ListingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ zapisano?: string; rezerwacja?: string }>;
+  searchParams: Promise<{
+    zapisano?: string;
+    rezerwacja?: string;
+    zgloszono?: string;
+  }>;
 }) {
   const { id } = await params;
-  const { zapisano, rezerwacja } = await searchParams;
+  const { zapisano, rezerwacja, zgloszono } = await searchParams;
   const listingId = Number(id);
 
   if (!Number.isInteger(listingId) || listingId < 1) {
@@ -100,6 +105,18 @@ export default async function ListingPage({
         {rezerwacja === "wyslana" && (
           <p className="mt-6 rounded-2xl bg-blue-100 px-5 py-4 font-bold text-blue-800">
             ✓ Prośba o rezerwację została wysłana do właściciela.
+          </p>
+        )}
+
+        {zgloszono === "1" && (
+          <p className="mt-6 rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Dziękujemy. Zgłoszenie zostało zapisane i czeka na sprawdzenie.
+          </p>
+        )}
+
+        {zgloszono === "istnieje" && (
+          <p className="mt-6 rounded-2xl bg-blue-100 px-5 py-4 font-bold text-blue-800">
+            To ogłoszenie zostało już przez Ciebie zgłoszone.
           </p>
         )}
 
@@ -311,6 +328,88 @@ export default async function ListingPage({
                   reviewCount={ownerReviewSummary?.count}
                 />
               </div>
+
+              {!isOwner && !isArchived && (
+                <div className="mt-6 border-t border-slate-200 pt-6">
+                  {!session ? (
+                    <Link
+                      href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
+                      className="text-sm font-bold text-slate-500 hover:text-red-700 hover:underline"
+                    >
+                      ⚑ Zaloguj się, aby zgłosić ogłoszenie
+                    </Link>
+                  ) : (
+                    <details className="group">
+                      <summary className="cursor-pointer list-none text-sm font-bold text-slate-500 hover:text-red-700">
+                        ⚑ Zgłoś ogłoszenie
+                      </summary>
+
+                      <form
+                        action={reportListing}
+                        className="mt-4 space-y-4 rounded-2xl border border-red-100 bg-red-50/60 p-4"
+                      >
+                        <input
+                          type="hidden"
+                          name="listing_id"
+                          value={listing.id}
+                        />
+
+                        <div>
+                          <label
+                            htmlFor="report_reason"
+                            className="text-sm font-bold text-slate-700"
+                          >
+                            Powód zgłoszenia
+                          </label>
+                          <select
+                            id="report_reason"
+                            name="reason"
+                            required
+                            defaultValue=""
+                            className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3"
+                          >
+                            <option value="" disabled>
+                              Wybierz powód
+                            </option>
+                            <option value="spam">Spam lub duplikat</option>
+                            <option value="fraud">Podejrzenie oszustwa</option>
+                            <option value="prohibited">Niedozwolona oferta</option>
+                            <option value="misleading">Treść wprowadza w błąd</option>
+                            <option value="other">Inny problem</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="report_details"
+                            className="text-sm font-bold text-slate-700"
+                          >
+                            Dodatkowe informacje
+                          </label>
+                          <textarea
+                            id="report_details"
+                            name="details"
+                            rows={4}
+                            maxLength={1000}
+                            placeholder="Opisz krótko, co wzbudziło Twoją uwagę."
+                            className="mt-1 w-full resize-none rounded-xl border border-slate-300 bg-white p-3"
+                          />
+                          <p className="mt-1 text-xs text-slate-500">
+                            Przy wyborze „Inny problem” opis jest wymagany.
+                          </p>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full rounded-xl bg-red-700 px-4 py-3 font-bold text-white hover:bg-red-800"
+                        >
+                          Wyślij zgłoszenie
+                        </button>
+                      </form>
+                    </details>
+                  )}
+                </div>
+              )}
             </div>
           </aside>
         </div>
