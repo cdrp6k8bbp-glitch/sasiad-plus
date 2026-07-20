@@ -100,9 +100,19 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
       </div>
 
       <div>
-        <label htmlFor="password" className="text-sm font-bold text-slate-700">
-          Hasło
-        </label>
+        <div className="flex items-center justify-between gap-4">
+          <label htmlFor="password" className="text-sm font-bold text-slate-700">
+            Hasło
+          </label>
+          {!isRegister && (
+            <Link
+              href="/nie-pamietam-hasla"
+              className="text-sm font-bold text-green-700 hover:underline"
+            >
+              Nie pamiętasz hasła?
+            </Link>
+          )}
+        </div>
         <input
           id="password"
           name="password"
