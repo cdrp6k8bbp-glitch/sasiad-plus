@@ -16,12 +16,14 @@ const fieldClassName =
 export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRegister = mode === "register";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setSuccess(null);
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
@@ -40,15 +42,30 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
             name: String(formData.get("name") ?? "").trim(),
             email,
             password,
+            callbackURL: redirectTo,
           })
         : await signIn.email({ email, password });
 
       if (result.error) {
+        if (!isRegister && result.error.status === 403) {
+          setError(
+            "Najpierw potwierdź adres e-mail. Wysłaliśmy nowy link na Twoją skrzynkę.",
+          );
+          return;
+        }
+
         setError(
           result.error.message ??
             (isRegister
               ? "Nie udało się utworzyć konta."
               : "Nieprawidłowy e-mail lub hasło."),
+        );
+        return;
+      }
+
+      if (isRegister) {
+        setSuccess(
+          "Sprawdź skrzynkę e-mail. Jeśli adres nie był wcześniej użyty, znajdziesz tam link aktywujący konto.",
         );
         return;
       }
@@ -141,9 +158,18 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
         </div>
       )}
 
+      {success && (
+        <div
+          role="status"
+          className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-800"
+        >
+          {success}
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || Boolean(success)}
         className="w-full rounded-2xl bg-green-700 px-6 py-4 font-black text-white transition hover:bg-green-800 disabled:cursor-wait disabled:opacity-60"
       >
         {isSubmitting

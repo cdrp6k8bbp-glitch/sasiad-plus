@@ -1,6 +1,9 @@
 import { betterAuth } from "better-auth";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { sendPasswordResetEmail } from "@/lib/email";
+import {
+  sendEmailVerificationEmail,
+  sendPasswordResetEmail,
+} from "@/lib/email";
 
 type AuthEnv = CloudflareEnv & {
   BETTER_AUTH_SECRET: string;
@@ -8,7 +11,7 @@ type AuthEnv = CloudflareEnv & {
   RESEND_API_KEY: string;
 };
 
-const { env } = await getCloudflareContext({ async: true });
+const { env, ctx } = await getCloudflareContext({ async: true });
 const authEnv = env as AuthEnv;
 
 export const auth = betterAuth({
@@ -16,6 +19,7 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
     minPasswordLength: 12,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60,
@@ -26,6 +30,22 @@ export const auth = betterAuth({
         recipient: user.email,
         resetUrl: url,
       });
+    },
+  },
+
+  emailVerification: {
+    expiresIn: 60 * 60,
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      ctx.waitUntil(
+        sendEmailVerificationEmail({
+          apiKey: authEnv.RESEND_API_KEY,
+          recipient: user.email,
+          verificationUrl: url,
+        }),
+      );
     },
   },
 
