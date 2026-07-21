@@ -55,6 +55,7 @@ export default async function Home({
 }: {
   searchParams: Promise<{
     dodano?: string;
+    konto?: string;
     q?: string;
     location?: string;
   }>;
@@ -135,6 +136,14 @@ export default async function Home({
         <div className="mx-auto mt-5 max-w-7xl px-4 md:px-8">
           <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-center font-medium text-green-800">
             Ogłoszenie zostało dodane.
+          </div>
+        </div>
+      )}
+
+      {params.konto === "usuniete" && (
+        <div className="mx-auto mt-5 max-w-7xl px-4 md:px-8">
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-center font-medium text-green-800">
+            Konto i powiązane z nim dane zostały usunięte.
           </div>
         </div>
       )}

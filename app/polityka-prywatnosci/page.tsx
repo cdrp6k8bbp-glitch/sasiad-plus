@@ -117,7 +117,8 @@ export default function PolitykaPrywatnosciPage() {
         <ul className={legalListClassName}>
           <li>
             dane konta, profilu i treści — przez czas posiadania konta; po
-            przyjęciu żądania usunięcia usuwamy je co do zasady w ciągu 30 dni;
+            użyciu funkcji usunięcia konta usuwamy je od razu, a po przyjęciu
+            żądania przesłanego e-mailem — co do zasady w ciągu 30 dni;
           </li>
           <li>
             dane potrzebne do rozpatrywania sporów, reklamacji, zgłoszeń i

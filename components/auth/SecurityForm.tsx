@@ -13,6 +13,8 @@ export default function SecurityForm() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isRevokingSessions, setIsRevokingSessions] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   async function handlePasswordChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,6 +86,39 @@ export default function SecurityForm() {
       setSessionError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
     } finally {
       setIsRevokingSessions(false);
+    }
+  }
+
+  async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeleteError(null);
+
+    const data = new FormData(event.currentTarget);
+    const password = String(data.get("deletePassword") ?? "");
+    const confirmation = String(data.get("deleteConfirmation") ?? "").trim();
+
+    if (confirmation !== "USUŃ KONTO") {
+      setDeleteError('Wpisz dokładnie „USUŃ KONTO”, aby potwierdzić.');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      const result = await authClient.deleteUser({ password });
+      if (result.error) {
+        setDeleteError(
+          result.error.status === 429
+            ? "Za dużo prób. Odczekaj kilka minut i spróbuj ponownie."
+            : "Nie udało się usunąć konta. Sprawdź hasło i spróbuj ponownie.",
+        );
+        return;
+      }
+
+      window.location.assign("/?konto=usuniete");
+    } catch {
+      setDeleteError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+    } finally {
+      setIsDeletingAccount(false);
     }
   }
 
@@ -196,6 +231,63 @@ export default function SecurityForm() {
           {isRevokingSessions ? "Wylogowuję…" : "Wyloguj inne urządzenia"}
         </button>
       </section>
+
+      <form
+        onSubmit={handleDeleteAccount}
+        className="rounded-[28px] border border-red-200 bg-red-50/50 p-5 sm:p-6"
+      >
+        <h2 className="text-2xl font-black text-red-800">Usuń konto</h2>
+        <p className="mt-2 leading-7 text-slate-600">
+          Ta operacja jest nieodwracalna. Usuniemy profil, ogłoszenia, zdjęcia,
+          rozmowy, rezerwacje, opinie, ulubione i powiadomienia.
+        </p>
+
+        <div className="mt-6 space-y-5">
+          <div>
+            <label htmlFor="deletePassword" className="font-bold">
+              Obecne hasło
+            </label>
+            <input
+              id="deletePassword"
+              name="deletePassword"
+              type="password"
+              autoComplete="current-password"
+              required
+              className={fieldClassName}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="deleteConfirmation" className="font-bold">
+              Wpisz USUŃ KONTO
+            </label>
+            <input
+              id="deleteConfirmation"
+              name="deleteConfirmation"
+              required
+              autoComplete="off"
+              className={fieldClassName}
+            />
+          </div>
+        </div>
+
+        {deleteError && (
+          <p
+            role="alert"
+            className="mt-5 rounded-2xl border border-red-200 bg-white p-4 font-semibold text-red-700"
+          >
+            {deleteError}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={isDeletingAccount}
+          className="mt-6 rounded-full bg-red-700 px-6 py-3 font-bold text-white transition hover:bg-red-800 disabled:cursor-wait disabled:opacity-60"
+        >
+          {isDeletingAccount ? "Usuwam konto…" : "Usuń konto bezpowrotnie"}
+        </button>
+      </form>
     </div>
   );
 }

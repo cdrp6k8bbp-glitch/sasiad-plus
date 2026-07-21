@@ -61,9 +61,9 @@ export default function RegulaminPage() {
           </li>
         </ul>
         <p>
-          Użytkownik może zrezygnować z konta, wysyłając prośbę na adres
-          kontaktowy. Przed usunięciem konta Usługodawca może poprosić o
-          potwierdzenie tożsamości właściciela konta.
+          Użytkownik może usunąć konto samodzielnie w sekcji „Bezpieczeństwo”
+          albo wysłać prośbę na adres kontaktowy. Przed usunięciem konta
+          Usługodawca może poprosić o potwierdzenie tożsamości właściciela konta.
         </p>
       </LegalSection>
 

@@ -4,6 +4,7 @@ import {
   sendEmailVerificationEmail,
   sendPasswordResetEmail,
 } from "@/lib/email";
+import { deleteUserApplicationData } from "@/lib/account-deletion";
 
 type AuthEnv = CloudflareEnv & {
   BETTER_AUTH_SECRET: string;
@@ -16,6 +17,15 @@ const authEnv = env as AuthEnv;
 
 export const auth = betterAuth({
   database: authEnv.DB,
+
+  user: {
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await deleteUserApplicationData(authEnv, user.id);
+      },
+    },
+  },
 
   emailAndPassword: {
     enabled: true,
@@ -58,6 +68,7 @@ export const auth = betterAuth({
       "/sign-in/email": { window: 60, max: 5 },
       "/sign-up/email": { window: 60, max: 3 },
       "/change-password": { window: 300, max: 5 },
+      "/delete-user": { window: 300, max: 3 },
       "/request-password-reset": { window: 60, max: 3 },
       "/reset-password": { window: 300, max: 5 },
     },
