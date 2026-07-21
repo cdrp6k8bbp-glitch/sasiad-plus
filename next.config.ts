@@ -17,14 +17,25 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/:path*",
+        source: "/",
         has: [
           {
             type: "host",
             value: "www.sasiad-plus.com",
           },
         ],
-        destination: "https://sasiad-plus.com/:path*",
+        destination: "https://sasiad-plus.com",
+        permanent: true,
+      },
+      {
+        source: "/:path+",
+        has: [
+          {
+            type: "host",
+            value: "www.sasiad-plus.com",
+          },
+        ],
+        destination: "https://sasiad-plus.com/:path",
         permanent: true,
       },
     ];
