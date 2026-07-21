@@ -149,6 +149,37 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
         )}
       </div>
 
+      {isRegister && (
+        <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+          <input
+            name="legalAcceptance"
+            type="checkbox"
+            required
+            className="mt-1 h-4 w-4 shrink-0 accent-green-700"
+          />
+          <span>
+            Mam ukończone 18 lat albo — jeśli mam 16–17 lat — zgodę
+            przedstawiciela ustawowego na korzystanie z platformy. Akceptuję{" "}
+            <Link
+              href="/regulamin"
+              target="_blank"
+              className="font-bold text-green-700 underline"
+            >
+              Regulamin
+            </Link>{" "}
+            i potwierdzam zapoznanie się z{" "}
+            <Link
+              href="/polityka-prywatnosci"
+              target="_blank"
+              className="font-bold text-green-700 underline"
+            >
+              Polityką prywatności
+            </Link>
+            .
+          </span>
+        </label>
+      )}
+
       {error && (
         <div
           role="alert"
