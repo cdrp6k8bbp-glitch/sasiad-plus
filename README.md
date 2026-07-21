@@ -6,7 +6,7 @@ Sąsiad+ to lokalna platforma wymiany usług i sprzętu między sąsiadami. Uży
 
 ## Środowiska
 
-- Produkcja: [sasiad-plus.t4pzthwd6z.workers.dev](https://sasiad-plus.t4pzthwd6z.workers.dev)
+- Produkcja: [sasiad-plus.com](https://sasiad-plus.com)
 - Staging: [sasiad-plus-staging.t4pzthwd6z.workers.dev](https://sasiad-plus-staging.t4pzthwd6z.workers.dev)
 
 Staging ma oddzielną bazę D1, magazyn zdjęć R2 i sekret uwierzytelniania. Dane testowe nie trafiają do produkcji.

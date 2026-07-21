@@ -3,6 +3,12 @@
 	"main": ".open-next/worker.js",
 	"name": "sasiad-plus",
 	"compatibility_date": "2026-07-13",
+	"routes": [
+		{
+			"pattern": "sasiad-plus.com",
+			"custom_domain": true
+		}
+	],
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
