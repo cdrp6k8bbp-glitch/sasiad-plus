@@ -52,6 +52,7 @@
 		"staging": {
 			"name": "sasiad-plus-staging",
 			"workers_dev": true,
+			"routes": [],
 			"cache": {
 				"enabled": true
 			},
