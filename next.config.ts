@@ -14,6 +14,21 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "6mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www.sasiad-plus.com",
+          },
+        ],
+        destination: "https://sasiad-plus.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

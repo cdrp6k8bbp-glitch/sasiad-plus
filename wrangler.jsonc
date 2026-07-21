@@ -7,6 +7,10 @@
 		{
 			"pattern": "sasiad-plus.com",
 			"custom_domain": true
+		},
+		{
+			"pattern": "www.sasiad-plus.com",
+			"custom_domain": true
 		}
 	],
 	"compatibility_flags": [
