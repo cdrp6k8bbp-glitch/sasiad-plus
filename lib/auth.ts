@@ -1,15 +1,22 @@
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   sendEmailVerificationEmail,
   sendPasswordResetEmail,
 } from "@/lib/email";
 import { deleteUserApplicationData } from "@/lib/account-deletion";
+import {
+  TURNSTILE_ERROR_CODE,
+  TURNSTILE_ERROR_MESSAGE,
+  verifyTurnstileRequest,
+} from "@/lib/turnstile";
 
 type AuthEnv = CloudflareEnv & {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   RESEND_API_KEY: string;
+  TURNSTILE_SECRET?: string;
 };
 
 const { env, ctx } = await getCloudflareContext({ async: true });
@@ -17,6 +24,33 @@ const authEnv = env as AuthEnv;
 
 export const auth = betterAuth({
   database: authEnv.DB,
+
+  hooks: {
+    before: createAuthMiddleware(async (context) => {
+      if (
+        ![
+          "/sign-in/email",
+          "/sign-up/email",
+          "/request-password-reset",
+        ].includes(context.path)
+      ) {
+        return;
+      }
+
+      if (
+        !context.request ||
+        !(await verifyTurnstileRequest(
+          context.request,
+          authEnv.TURNSTILE_SECRET,
+        ))
+      ) {
+        throw APIError.from("FORBIDDEN", {
+          code: TURNSTILE_ERROR_CODE,
+          message: TURNSTILE_ERROR_MESSAGE,
+        });
+      }
+    }),
+  },
 
   user: {
     deleteUser: {

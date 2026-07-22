@@ -4,6 +4,10 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, signUp } from "@/lib/auth-client";
+import TurnstileWidget, {
+  resetTurnstile,
+  TURNSTILE_ERROR_CODE,
+} from "@/components/auth/TurnstileWidget";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -29,6 +33,15 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const turnstileToken = String(
+      formData.get("cf-turnstile-response") ?? "",
+    ).trim();
+
+    if (!turnstileToken) {
+      setError("Poczekaj na zakończenie weryfikacji bezpieczeństwa.");
+      setIsSubmitting(false);
+      return;
+    }
 
     if (isRegister && password.length < 12) {
       setError("Hasło musi mieć co najmniej 12 znaków.");
@@ -43,10 +56,26 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
             email,
             password,
             callbackURL: redirectTo,
+            fetchOptions: {
+              headers: { "x-turnstile-token": turnstileToken },
+            },
           })
-        : await signIn.email({ email, password });
+        : await signIn.email({
+            email,
+            password,
+            fetchOptions: {
+              headers: { "x-turnstile-token": turnstileToken },
+            },
+          });
 
       if (result.error) {
+        if (result.error.code === TURNSTILE_ERROR_CODE) {
+          setError(
+            "Weryfikacja bezpieczeństwa nie powiodła się. Spróbuj ponownie.",
+          );
+          return;
+        }
+
         if (!isRegister && result.error.status === 403) {
           setError(
             "Najpierw potwierdź adres e-mail. Wysłaliśmy nowy link na Twoją skrzynkę.",
@@ -75,6 +104,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
     } catch {
       setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
     } finally {
+      resetTurnstile();
       setIsSubmitting(false);
     }
   }
@@ -179,6 +209,8 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
           </span>
         </label>
       )}
+
+      <TurnstileWidget />
 
       {error && (
         <div
