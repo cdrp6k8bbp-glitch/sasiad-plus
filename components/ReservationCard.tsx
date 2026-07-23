@@ -29,6 +29,16 @@ function formatDate(value: string): string {
   }).format(new Date(`${value}T12:00:00`));
 }
 
+function formatPeriod(reservation: Reservation): string {
+  const start = `${formatDate(reservation.start_date)}, ${reservation.start_time}`;
+  const end =
+    reservation.start_date === reservation.end_date
+      ? reservation.end_time
+      : `${formatDate(reservation.end_date)}, ${reservation.end_time}`;
+
+  return `${start} – ${end}`;
+}
+
 export default function ReservationCard({
   reservation,
   perspective,
@@ -70,7 +80,7 @@ export default function ReservationCard({
       </div>
 
       <p className="mt-4 font-bold text-slate-800">
-        📅 {formatDate(reservation.start_date)} – {formatDate(reservation.end_date)}
+        📅 {formatPeriod(reservation)}
       </p>
 
       {reservation.note && (

@@ -36,6 +36,8 @@ schema_json="$(wrangler d1 execute sasiad-plus-db-staging \
     AND EXISTS (SELECT 1 FROM pragma_table_info('listings') WHERE name = 'archived_at')
     AND EXISTS (SELECT 1 FROM pragma_table_info('messages') WHERE name = 'read_at')
     AND EXISTS (SELECT 1 FROM pragma_table_info('reservations') WHERE name = 'completed_at')
+    AND EXISTS (SELECT 1 FROM pragma_table_info('reservations') WHERE name = 'start_time')
+    AND EXISTS (SELECT 1 FROM pragma_table_info('reservations') WHERE name = 'end_time')
     THEN 1 ELSE 0 END AS schema_ok;")"
 
 SCHEMA_JSON="$schema_json" node -e '

@@ -14,7 +14,10 @@ import {
   cancelReservation,
   createReservation,
 } from "@/app/rezerwacje/actions";
-import { getActiveReservationForListingAndUser } from "@/lib/reservations";
+import {
+  getAcceptedReservationSlotsForListing,
+  getActiveReservationForListingAndUser,
+} from "@/lib/reservations";
 import { getReviewSummary } from "@/lib/reviews";
 import { reportListing } from "@/app/zgloszenia/actions";
 
@@ -66,6 +69,10 @@ export default async function ListingPage({
         session.user.id,
       )
     : null;
+  const acceptedReservationSlots =
+    listing.owner_id && !isOwner && !isArchived && !activeReservation
+      ? await getAcceptedReservationSlotsForListing(listing.id)
+      : [];
   const imageKeys = parseListingImageKeys(
     listing.image_keys,
     listing.image_key,
@@ -249,7 +256,9 @@ export default async function ListingPage({
                           : "⏳ Prośba oczekuje na odpowiedź"}
                       </p>
                       <p className="mt-2 text-sm font-semibold">
-                        {activeReservation.start_date} – {activeReservation.end_date}
+                        {activeReservation.start_date}, {activeReservation.start_time}
+                        {" – "}
+                        {activeReservation.end_date}, {activeReservation.end_time}
                       </p>
                       <form action={cancelReservation} className="mt-3">
                         <input
@@ -268,10 +277,30 @@ export default async function ListingPage({
                   ) : (
                     <form action={createReservation} className="mt-4 space-y-3">
                       <input type="hidden" name="listing_id" value={listing.id} />
+                      <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
+                        Wybierz dzień i godziny w czasie lokalnym. Dostępne są
+                        przedziały co 30 minut.
+                      </p>
+                      {acceptedReservationSlots.length > 0 && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                          <p className="text-sm font-black text-amber-900">
+                            Już zajęte terminy
+                          </p>
+                          <ul className="mt-2 space-y-1 text-sm font-semibold text-amber-800">
+                            {acceptedReservationSlots.map((slot) => (
+                              <li key={slot.id}>
+                                {slot.start_date}, {slot.start_time}
+                                {" – "}
+                                {slot.end_date}, {slot.end_time}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label htmlFor="start_date" className="text-sm font-bold text-slate-700">
-                            Od
+                            Dzień od
                           </label>
                           <input
                             id="start_date"
@@ -284,13 +313,41 @@ export default async function ListingPage({
                         </div>
                         <div>
                           <label htmlFor="end_date" className="text-sm font-bold text-slate-700">
-                            Do
+                            Dzień do
                           </label>
                           <input
                             id="end_date"
                             name="end_date"
                             type="date"
                             min={new Date().toISOString().slice(0, 10)}
+                            required
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="start_time" className="text-sm font-bold text-slate-700">
+                            Godzina od
+                          </label>
+                          <input
+                            id="start_time"
+                            name="start_time"
+                            type="time"
+                            step={1800}
+                            defaultValue="09:00"
+                            required
+                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="end_time" className="text-sm font-bold text-slate-700">
+                            Godzina do
+                          </label>
+                          <input
+                            id="end_time"
+                            name="end_time"
+                            type="time"
+                            step={1800}
+                            defaultValue="17:00"
                             required
                             className="mt-1 w-full rounded-xl border border-slate-300 p-3"
                           />

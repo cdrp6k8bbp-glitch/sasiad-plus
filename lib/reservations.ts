@@ -16,12 +16,19 @@ export type Reservation = {
   owner_name: string;
   start_date: string;
   end_date: string;
+  start_time: string;
+  end_time: string;
   note: string | null;
   status: ReservationStatus;
   completed_at: string | null;
   review_id: number | null;
   created_at: string;
 };
+
+export type ReservationSlot = Pick<
+  Reservation,
+  "id" | "start_date" | "start_time" | "end_date" | "end_time"
+>;
 
 const RESERVATION_COLUMNS = `
   reservations.id,
@@ -33,6 +40,8 @@ const RESERVATION_COLUMNS = `
   owner.name AS owner_name,
   reservations.start_date,
   reservations.end_date,
+  reservations.start_time,
+  reservations.end_time,
   reservations.note,
   reservations.status,
   reservations.completed_at,
@@ -106,4 +115,24 @@ export async function getActiveReservationForListingAndUser(
     .first<Reservation>();
 
   return reservation ?? null;
+}
+
+export async function getAcceptedReservationSlotsForListing(
+  listingId: number,
+): Promise<ReservationSlot[]> {
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `SELECT id, start_date, start_time, end_date, end_time
+     FROM reservations
+     WHERE listing_id = ?
+       AND status = 'accepted'
+       AND completed_at IS NULL
+       AND end_date >= date('now')
+     ORDER BY start_date, start_time
+     LIMIT 20`,
+  )
+    .bind(listingId)
+    .all<ReservationSlot>();
+
+  return result.results;
 }

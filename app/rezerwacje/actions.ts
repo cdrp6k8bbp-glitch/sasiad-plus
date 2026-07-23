@@ -23,6 +23,36 @@ function dateValue(formData: FormData, field: string): string {
   return value;
 }
 
+function timeValue(formData: FormData, field: string): string {
+  const value = formData.get(field);
+
+  if (
+    typeof value !== "string" ||
+    !/^(?:[01]\d|2[0-3]):(?:00|30)$/.test(value)
+  ) {
+    throw new Error("Wybierz godzinę z dokładnością do 30 minut.");
+  }
+
+  return value;
+}
+
+function reservationDateTime(date: string, time: string): string {
+  return `${date} ${time}:00`;
+}
+
+function formatReservationPeriod(
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  endTime: string,
+): string {
+  if (startDate === endDate) {
+    return `${startDate}, ${startTime}–${endTime}`;
+  }
+
+  return `${startDate} ${startTime} – ${endDate} ${endTime}`;
+}
+
 function revalidateReservationPages(listingId: number) {
   revalidatePath("/");
   revalidatePath("/sprzet");
@@ -49,11 +79,15 @@ export async function createReservation(formData: FormData): Promise<void> {
 
   const startDate = dateValue(formData, "start_date");
   const endDate = dateValue(formData, "end_date");
+  const startTime = timeValue(formData, "start_time");
+  const endTime = timeValue(formData, "end_time");
   const today = new Date().toISOString().slice(0, 10);
+  const startDateTime = reservationDateTime(startDate, startTime);
+  const endDateTime = reservationDateTime(endDate, endTime);
   const noteValue = formData.get("note");
   const note = typeof noteValue === "string" ? noteValue.trim() : "";
 
-  if (startDate < today || endDate < startDate) {
+  if (startDate < today || endDateTime <= startDateTime) {
     throw new Error("Termin rezerwacji jest nieprawidłowy.");
   }
 
@@ -96,44 +130,59 @@ export async function createReservation(formData: FormData): Promise<void> {
     throw new Error("Masz już aktywną prośbę dotyczącą tego ogłoszenia.");
   }
 
-  const conflictingReservation = await env.DB.prepare(
-    `SELECT id
-     FROM reservations
-     WHERE listing_id = ?
-       AND status = 'accepted'
-       AND completed_at IS NULL
-       AND start_date <= ?
-       AND end_date >= ?
-     LIMIT 1`,
+  const insertResult = await env.DB.prepare(
+    `INSERT INTO reservations (
+       listing_id,
+       requester_id,
+       owner_id,
+       start_date,
+       end_date,
+       start_time,
+       end_time,
+       note
+     )
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?
+     WHERE NOT EXISTS (
+       SELECT 1
+       FROM reservations AS conflicting
+       WHERE conflicting.listing_id = ?
+         AND conflicting.status = 'accepted'
+         AND conflicting.completed_at IS NULL
+         AND datetime(conflicting.start_date || ' ' || conflicting.start_time) < datetime(?)
+         AND datetime(conflicting.end_date || ' ' || conflicting.end_time) > datetime(?)
+     )`,
   )
-    .bind(listingId, endDate, startDate)
-    .first<{ id: number }>();
-
-  if (conflictingReservation) {
-    throw new Error("Wybrany termin jest już zarezerwowany.");
-  }
-
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT INTO reservations (
-         listing_id, requester_id, owner_id, start_date, end_date, note
-       ) VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(
+    .bind(
       listingId,
       session.user.id,
       listing.owner_id,
       startDate,
       endDate,
+      startTime,
+      endTime,
       note || null,
-    ),
-    createNotificationStatement(env.DB, {
-      userId: listing.owner_id,
-      type: "reservation_created",
-      title: "Nowa prośba o rezerwację",
-      body: `${session.user.name} chce zarezerwować „${listing.title}” w terminie ${startDate}–${endDate}.`,
-      href: "/profil#rezerwacje",
-    }),
-  ]);
+      listingId,
+      endDateTime,
+      startDateTime,
+    )
+    .run();
+
+  if (insertResult.meta.changes !== 1) {
+    throw new Error("Wybrany termin jest już zarezerwowany.");
+  }
+
+  await createNotificationStatement(env.DB, {
+    userId: listing.owner_id,
+    type: "reservation_created",
+    title: "Nowa prośba o rezerwację",
+    body: `${session.user.name} chce zarezerwować „${listing.title}” w terminie ${formatReservationPeriod(
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+    )}.`,
+    href: "/profil#rezerwacje",
+  }).run();
 
   revalidateReservationPages(listingId);
   redirect(`/ogloszenie/${listingId}?rezerwacja=wyslana`);
@@ -161,6 +210,8 @@ export async function respondToReservation(formData: FormData): Promise<void> {
        reservations.owner_id,
        reservations.start_date,
        reservations.end_date,
+       reservations.start_time,
+       reservations.end_time,
        reservations.status,
        listings.title AS listing_title
      FROM reservations
@@ -176,6 +227,8 @@ export async function respondToReservation(formData: FormData): Promise<void> {
       owner_id: string;
       start_date: string;
       end_date: string;
+      start_time: string;
+      end_time: string;
       status: string;
       listing_title: string;
     }>();
@@ -189,27 +242,63 @@ export async function respondToReservation(formData: FormData): Promise<void> {
   }
 
   if (response === "accepted") {
-    await env.DB.batch([
-      env.DB.prepare(
-        `UPDATE reservations
-         SET status = 'accepted', updated_at = datetime('now')
-         WHERE id = ? AND owner_id = ? AND status = 'pending'`,
-      ).bind(reservation.id, session.user.id),
-      env.DB.prepare(
-        `UPDATE reservations
-         SET status = 'rejected', updated_at = datetime('now')
-         WHERE listing_id = ?
-           AND id != ?
-           AND status = 'pending'
-           AND start_date <= ?
-           AND end_date >= ?`,
-      ).bind(
+    const startDateTime = reservationDateTime(
+      reservation.start_date,
+      reservation.start_time,
+    );
+    const endDateTime = reservationDateTime(
+      reservation.end_date,
+      reservation.end_time,
+    );
+    const acceptResult = await env.DB.prepare(
+      `UPDATE reservations
+       SET status = 'accepted', updated_at = datetime('now')
+       WHERE id = ?
+         AND owner_id = ?
+         AND status = 'pending'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM reservations AS conflicting
+           WHERE conflicting.listing_id = ?
+             AND conflicting.id != ?
+             AND conflicting.status = 'accepted'
+             AND conflicting.completed_at IS NULL
+             AND datetime(conflicting.start_date || ' ' || conflicting.start_time) < datetime(?)
+             AND datetime(conflicting.end_date || ' ' || conflicting.end_time) > datetime(?)
+         )`,
+    )
+      .bind(
+        reservation.id,
+        session.user.id,
         reservation.listing_id,
         reservation.id,
-        reservation.end_date,
-        reservation.start_date,
-      ),
-    ]);
+        endDateTime,
+        startDateTime,
+      )
+      .run();
+
+    if (acceptResult.meta.changes !== 1) {
+      throw new Error(
+        "Tego terminu nie można już zaakceptować, ponieważ koliduje z inną rezerwacją.",
+      );
+    }
+
+    await env.DB.prepare(
+      `UPDATE reservations
+       SET status = 'rejected', updated_at = datetime('now')
+       WHERE listing_id = ?
+         AND id != ?
+         AND status = 'pending'
+         AND datetime(start_date || ' ' || start_time) < datetime(?)
+         AND datetime(end_date || ' ' || end_time) > datetime(?)`,
+    )
+      .bind(
+        reservation.listing_id,
+        reservation.id,
+        endDateTime,
+        startDateTime,
+      )
+      .run();
   } else {
     await env.DB.prepare(
       `UPDATE reservations
