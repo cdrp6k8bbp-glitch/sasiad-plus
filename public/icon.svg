@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sąsiad+">
+  <rect width="512" height="512" rx="112" fill="#15803d"/>
+  <path d="M128 250 256 142l128 108v126a34 34 0 0 1-34 34H162a34 34 0 0 1-34-34V250Z" fill="#fff"/>
+  <path d="M112 256 256 134l144 122" fill="none" stroke="#dcfce7" stroke-linecap="round" stroke-linejoin="round" stroke-width="38"/>
+  <path d="M218 410V298h76v112" fill="#15803d"/>
+  <circle cx="278" cy="350" r="6" fill="#dcfce7"/>
+  <circle cx="374" cy="138" r="68" fill="#16a34a"/>
+  <path d="M374 102v72M338 138h72" stroke="#fff" stroke-linecap="round" stroke-width="22"/>
+</svg>

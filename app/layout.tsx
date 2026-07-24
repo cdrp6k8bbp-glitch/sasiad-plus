@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import SiteFooter from "@/components/SiteFooter";
 import "./globals.css";
 
@@ -16,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sąsiad+",
   description: "Pożyczaj rzeczy i pomagaj sąsiadom w swojej okolicy.",
+  applicationName: "Sąsiad+",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Sąsiad+",
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +36,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegistration />
         {children}
         <SiteFooter />
       </body>
