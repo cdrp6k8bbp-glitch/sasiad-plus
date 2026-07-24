@@ -12,6 +12,15 @@ type EmailVerificationEmail = {
   verificationUrl: string;
 };
 
+type ReservationUpdateEmail = {
+  apiKey: string;
+  recipient: string;
+  subject: string;
+  heading: string;
+  body: string;
+  actionUrl: string;
+};
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -126,5 +135,63 @@ export async function sendEmailVerificationEmail({
       }),
     );
     throw new Error("Nie udało się wysłać wiadomości potwierdzającej.");
+  }
+}
+
+export async function sendReservationUpdateEmail({
+  apiKey,
+  recipient,
+  subject,
+  heading,
+  body,
+  actionUrl,
+}: ReservationUpdateEmail) {
+  if (!apiKey) {
+    throw new Error("Brak konfiguracji usługi wysyłającej wiadomości.");
+  }
+
+  const safeSubject = subject.replace(/[\r\n]+/g, " ").trim();
+  const safeHeading = escapeHtml(heading);
+  const safeBody = escapeHtml(body);
+  const safeActionUrl = escapeHtml(actionUrl);
+  const response = await fetch(RESEND_EMAILS_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Sąsiad+ <noreply@sasiad-plus.com>",
+      to: [recipient],
+      subject: safeSubject,
+      text: [
+        heading,
+        "",
+        body,
+        "",
+        `Zobacz rezerwacje: ${actionUrl}`,
+      ].join("\n"),
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6; max-width: 560px; margin: 0 auto;">
+          <p style="font-size: 22px; font-weight: 800; color: #15803d;">Sąsiad+</p>
+          <h1 style="font-size: 28px; line-height: 1.2;">${safeHeading}</h1>
+          <p>${safeBody}</p>
+          <p style="margin: 28px 0;">
+            <a href="${safeActionUrl}" style="display: inline-block; border-radius: 14px; background: #15803d; color: #ffffff; padding: 14px 22px; font-weight: 700; text-decoration: none;">Zobacz rezerwacje</a>
+          </p>
+          <p style="color: #64748b;">To automatyczna wiadomość z platformy Sąsiad+.</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    console.error(
+      JSON.stringify({
+        event: "reservation_email_failed",
+        status: response.status,
+      }),
+    );
+    throw new Error("Nie udało się wysłać wiadomości o rezerwacji.");
   }
 }

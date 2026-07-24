@@ -5,7 +5,13 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { sendReservationUpdateEmail } from "@/lib/email";
 import { createNotificationStatement } from "@/lib/notifications";
+
+type ReservationEmailEnv = CloudflareEnv & {
+  BETTER_AUTH_URL: string;
+  RESEND_API_KEY: string;
+};
 
 function positiveInteger(value: FormDataEntryValue | null): number | null {
   if (typeof value !== "string") return null;
@@ -61,6 +67,42 @@ function revalidateReservationPages(listingId: number) {
   revalidatePath(`/ogloszenie/${listingId}`);
 }
 
+function queueReservationEmail({
+  ctx,
+  env,
+  recipient,
+  subject,
+  heading,
+  body,
+}: {
+  ctx: ExecutionContext;
+  env: ReservationEmailEnv;
+  recipient: string;
+  subject: string;
+  heading: string;
+  body: string;
+}) {
+  const actionUrl = `${env.BETTER_AUTH_URL.replace(/\/$/, "")}/profil#rezerwacje`;
+
+  ctx.waitUntil(
+    sendReservationUpdateEmail({
+      apiKey: env.RESEND_API_KEY,
+      recipient,
+      subject,
+      heading,
+      body,
+      actionUrl,
+    }).catch((error: unknown) => {
+      console.error(
+        JSON.stringify({
+          event: "reservation_email_background_failed",
+          message: error instanceof Error ? error.message : "unknown_error",
+        }),
+      );
+    }),
+  );
+}
+
 export async function createReservation(formData: FormData): Promise<void> {
   const listingId = positiveInteger(formData.get("listing_id"));
   const session = await auth.api.getSession({ headers: await headers() });
@@ -95,15 +137,20 @@ export async function createReservation(formData: FormData): Promise<void> {
     throw new Error("Wiadomość może mieć maksymalnie 500 znaków.");
   }
 
-  const { env } = await getCloudflareContext({ async: true });
+  const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
+  const env = cloudflareEnv as ReservationEmailEnv;
   const listing = await env.DB.prepare(
-    `SELECT owner_id, title
+    `SELECT
+       listings.owner_id,
+       listings.title,
+       owner.email AS owner_email
      FROM listings
-     WHERE id = ? AND archived_at IS NULL
+     JOIN "user" AS owner ON owner.id = listings.owner_id
+     WHERE listings.id = ? AND listings.archived_at IS NULL
      LIMIT 1`,
   )
     .bind(listingId)
-    .first<{ owner_id: string | null; title: string }>();
+    .first<{ owner_id: string | null; title: string; owner_email: string }>();
 
   if (!listing?.owner_id) {
     throw new Error("To ogłoszenie nie przyjmuje jeszcze rezerwacji.");
@@ -171,18 +218,29 @@ export async function createReservation(formData: FormData): Promise<void> {
     throw new Error("Wybrany termin jest już zarezerwowany.");
   }
 
+  const reservationPeriod = formatReservationPeriod(
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+  );
+
   await createNotificationStatement(env.DB, {
     userId: listing.owner_id,
     type: "reservation_created",
     title: "Nowa prośba o rezerwację",
-    body: `${session.user.name} chce zarezerwować „${listing.title}” w terminie ${formatReservationPeriod(
-      startDate,
-      startTime,
-      endDate,
-      endTime,
-    )}.`,
+    body: `${session.user.name} chce zarezerwować „${listing.title}” w terminie ${reservationPeriod}.`,
     href: "/profil#rezerwacje",
   }).run();
+
+  queueReservationEmail({
+    ctx,
+    env,
+    recipient: listing.owner_email,
+    subject: `Nowa prośba o rezerwację: ${listing.title}`,
+    heading: "Nowa prośba o rezerwację",
+    body: `${session.user.name} chce zarezerwować „${listing.title}” w terminie ${reservationPeriod}.`,
+  });
 
   revalidateReservationPages(listingId);
   redirect(`/ogloszenie/${listingId}?rezerwacja=wyslana`);
@@ -201,7 +259,8 @@ export async function respondToReservation(formData: FormData): Promise<void> {
     throw new Error("Nieprawidłowa odpowiedź na rezerwację.");
   }
 
-  const { env } = await getCloudflareContext({ async: true });
+  const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
+  const env = cloudflareEnv as ReservationEmailEnv;
   const reservation = await env.DB.prepare(
     `SELECT
        reservations.id,
@@ -213,9 +272,11 @@ export async function respondToReservation(formData: FormData): Promise<void> {
        reservations.start_time,
        reservations.end_time,
        reservations.status,
-       listings.title AS listing_title
+       listings.title AS listing_title,
+       requester.email AS requester_email
      FROM reservations
      JOIN listings ON listings.id = reservations.listing_id
+     JOIN "user" AS requester ON requester.id = reservations.requester_id
      WHERE reservations.id = ?
      LIMIT 1`,
   )
@@ -231,6 +292,7 @@ export async function respondToReservation(formData: FormData): Promise<void> {
       end_time: string;
       status: string;
       listing_title: string;
+      requester_email: string;
     }>();
 
   if (!reservation || reservation.owner_id !== session.user.id) {
@@ -326,6 +388,22 @@ export async function respondToReservation(formData: FormData): Promise<void> {
     href: "/profil#rezerwacje",
   }).run();
 
+  const responseAccepted = response === "accepted";
+  queueReservationEmail({
+    ctx,
+    env,
+    recipient: reservation.requester_email,
+    subject: responseAccepted
+      ? `Rezerwacja zaakceptowana: ${reservation.listing_title}`
+      : `Rezerwacja odrzucona: ${reservation.listing_title}`,
+    heading: responseAccepted
+      ? "Rezerwacja zaakceptowana"
+      : "Rezerwacja odrzucona",
+    body: responseAccepted
+      ? `Twoja rezerwacja „${reservation.listing_title}” została zaakceptowana.`
+      : `Twoja prośba dotycząca „${reservation.listing_title}” została odrzucona.`,
+  });
+
   revalidateReservationPages(reservation.listing_id);
   redirect(
     `/profil?rezerwacja=${
@@ -346,21 +424,29 @@ export async function cancelReservation(formData: FormData): Promise<void> {
     throw new Error("Nieprawidłowa rezerwacja.");
   }
 
-  const { env } = await getCloudflareContext({ async: true });
+  const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
+  const env = cloudflareEnv as ReservationEmailEnv;
   const reservation = await env.DB.prepare(
     `SELECT
        reservations.listing_id,
        reservations.owner_id,
-       listings.title AS listing_title
+       listings.title AS listing_title,
+       owner.email AS owner_email
      FROM reservations
      JOIN listings ON listings.id = reservations.listing_id
+     JOIN "user" AS owner ON owner.id = reservations.owner_id
      WHERE reservations.id = ? AND reservations.requester_id = ?
        AND reservations.status IN ('pending', 'accepted')
        AND reservations.completed_at IS NULL
      LIMIT 1`,
   )
     .bind(reservationId, session.user.id)
-    .first<{ listing_id: number; owner_id: string; listing_title: string }>();
+    .first<{
+      listing_id: number;
+      owner_id: string;
+      listing_title: string;
+      owner_email: string;
+    }>();
 
   if (!reservation) {
     throw new Error("Nie można anulować tej rezerwacji.");
@@ -381,6 +467,15 @@ export async function cancelReservation(formData: FormData): Promise<void> {
     }),
   ]);
 
+  queueReservationEmail({
+    ctx,
+    env,
+    recipient: reservation.owner_email,
+    subject: `Rezerwacja anulowana: ${reservation.listing_title}`,
+    heading: "Rezerwacja anulowana",
+    body: `${session.user.name} anulował(a) rezerwację „${reservation.listing_title}”.`,
+  });
+
   revalidateReservationPages(reservation.listing_id);
   redirect("/profil?rezerwacja=anulowana#rezerwacje");
 }
@@ -397,15 +492,20 @@ export async function completeReservation(formData: FormData): Promise<void> {
     throw new Error("Nieprawidłowa rezerwacja.");
   }
 
-  const { env } = await getCloudflareContext({ async: true });
+  const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
+  const env = cloudflareEnv as ReservationEmailEnv;
   const reservation = await env.DB.prepare(
     `SELECT
        reservations.listing_id,
        reservations.requester_id,
        reservations.owner_id,
-       listings.title AS listing_title
+       listings.title AS listing_title,
+       requester.email AS requester_email,
+       owner.email AS owner_email
      FROM reservations
      JOIN listings ON listings.id = reservations.listing_id
+     JOIN "user" AS requester ON requester.id = reservations.requester_id
+     JOIN "user" AS owner ON owner.id = reservations.owner_id
      WHERE reservations.id = ?
        AND reservations.status = 'accepted'
        AND reservations.completed_at IS NULL
@@ -418,6 +518,8 @@ export async function completeReservation(formData: FormData): Promise<void> {
       requester_id: string;
       owner_id: string;
       listing_title: string;
+      requester_email: string;
+      owner_email: string;
     }>();
 
   if (!reservation) {
@@ -428,6 +530,10 @@ export async function completeReservation(formData: FormData): Promise<void> {
     session.user.id === reservation.owner_id
       ? reservation.requester_id
       : reservation.owner_id;
+  const recipientEmail =
+    session.user.id === reservation.owner_id
+      ? reservation.requester_email
+      : reservation.owner_email;
 
   await env.DB.batch([
     env.DB.prepare(
@@ -443,6 +549,15 @@ export async function completeReservation(formData: FormData): Promise<void> {
       href: "/profil#rezerwacje",
     }),
   ]);
+
+  queueReservationEmail({
+    ctx,
+    env,
+    recipient: recipientEmail,
+    subject: `Rezerwacja zakończona: ${reservation.listing_title}`,
+    heading: "Rezerwacja zakończona",
+    body: `Rezerwacja „${reservation.listing_title}” została oznaczona jako zakończona.`,
+  });
 
   revalidateReservationPages(reservation.listing_id);
   redirect("/profil?rezerwacja=zakonczona#rezerwacje");
