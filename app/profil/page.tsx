@@ -138,6 +138,18 @@ export default async function ProfilPage({
           </p>
         )}
 
+        {rezerwacja === "anulowana" && (
+          <p className="rounded-2xl bg-slate-100 px-5 py-4 font-bold text-slate-700">
+            Rezerwacja została anulowana.
+          </p>
+        )}
+
+        {rezerwacja === "zakonczona" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Rezerwacja została oznaczona jako zakończona.
+          </p>
+        )}
+
         <Link
           href={`/u/${session.user.id}`}
           className="inline-flex font-bold text-green-700 hover:underline"

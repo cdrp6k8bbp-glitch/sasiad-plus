@@ -382,7 +382,7 @@ export async function cancelReservation(formData: FormData): Promise<void> {
   ]);
 
   revalidateReservationPages(reservation.listing_id);
-  redirect("/profil#rezerwacje");
+  redirect("/profil?rezerwacja=anulowana#rezerwacje");
 }
 
 export async function completeReservation(formData: FormData): Promise<void> {
@@ -445,5 +445,5 @@ export async function completeReservation(formData: FormData): Promise<void> {
   ]);
 
   revalidateReservationPages(reservation.listing_id);
-  redirect("/profil#rezerwacje");
+  redirect("/profil?rezerwacja=zakonczona#rezerwacje");
 }
