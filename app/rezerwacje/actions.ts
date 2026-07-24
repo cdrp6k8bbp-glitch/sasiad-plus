@@ -327,7 +327,11 @@ export async function respondToReservation(formData: FormData): Promise<void> {
   }).run();
 
   revalidateReservationPages(reservation.listing_id);
-  redirect("/profil#rezerwacje");
+  redirect(
+    `/profil?rezerwacja=${
+      response === "accepted" ? "zaakceptowana" : "odrzucona"
+    }#rezerwacje`,
+  );
 }
 
 export async function cancelReservation(formData: FormData): Promise<void> {

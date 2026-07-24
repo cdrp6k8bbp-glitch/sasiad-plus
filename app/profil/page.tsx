@@ -29,9 +29,16 @@ export default async function ProfilPage({
     przywrocono?: string;
     oceniono?: string;
     zapisano?: string;
+    rezerwacja?: string;
   }>;
 }) {
-  const { zarchiwizowano, przywrocono, oceniono, zapisano } = await searchParams;
+  const {
+    zarchiwizowano,
+    przywrocono,
+    oceniono,
+    zapisano,
+    rezerwacja,
+  } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
@@ -116,6 +123,18 @@ export default async function ProfilPage({
         {zapisano === "1" && (
           <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
             ✓ Profil został zaktualizowany.
+          </p>
+        )}
+
+        {rezerwacja === "zaakceptowana" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Rezerwacja została zaakceptowana.
+          </p>
+        )}
+
+        {rezerwacja === "odrzucona" && (
+          <p className="rounded-2xl bg-slate-100 px-5 py-4 font-bold text-slate-700">
+            Rezerwacja została odrzucona.
           </p>
         )}
 
