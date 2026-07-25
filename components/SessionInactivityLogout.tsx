@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import { signOut, useSession } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 
 const INACTIVITY_LIMIT_MS = 5 * 60 * 1000;
 const ACTIVITY_STORAGE_KEY = "sasiad-plus:last-activity";
 const ACTIVITY_THROTTLE_MS = 1000;
 
-export default function SessionInactivityLogout() {
-  const { data: session, isPending } = useSession();
-  const sessionUserId = session?.user.id;
-
+export default function SessionInactivityLogout({
+  sessionUserId,
+}: {
+  sessionUserId: string | null;
+}) {
   useEffect(() => {
-    if (isPending || !sessionUserId) return;
+    if (!sessionUserId) return;
 
     let timeoutId: number | undefined;
     let lastActivity = Date.now();
@@ -135,7 +136,7 @@ export default function SessionInactivityLogout() {
       window.removeEventListener("storage", handleSharedActivity);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isPending, sessionUserId]);
+  }, [sessionUserId]);
 
   return null;
 }
