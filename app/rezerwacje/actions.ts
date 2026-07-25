@@ -606,7 +606,9 @@ export async function completeReservation(formData: FormData): Promise<void> {
        reservations.owner_id,
        listings.title AS listing_title,
        requester.email AS requester_email,
-       owner.email AS owner_email
+       owner.email AS owner_email,
+       reservations.owner_completed_at,
+       reservations.requester_completed_at
      FROM reservations
      JOIN listings ON listings.id = reservations.listing_id
      JOIN "user" AS requester ON requester.id = reservations.requester_id
@@ -625,6 +627,8 @@ export async function completeReservation(formData: FormData): Promise<void> {
       listing_title: string;
       requester_email: string;
       owner_email: string;
+      owner_completed_at: string | null;
+      requester_completed_at: string | null;
     }>();
 
   if (!reservation) {
@@ -639,32 +643,97 @@ export async function completeReservation(formData: FormData): Promise<void> {
     session.user.id === reservation.owner_id
       ? reservation.requester_email
       : reservation.owner_email;
+  const isOwner = session.user.id === reservation.owner_id;
+  const confirmationColumn = isOwner
+    ? "owner_completed_at"
+    : "requester_completed_at";
+  const alreadyConfirmed = isOwner
+    ? reservation.owner_completed_at
+    : reservation.requester_completed_at;
 
-  await env.DB.batch([
-    env.DB.prepare(
-      `UPDATE reservations
-       SET completed_at = datetime('now'), updated_at = datetime('now')
-       WHERE id = ? AND completed_at IS NULL`,
-    ).bind(reservationId),
-    createNotificationStatement(env.DB, {
+  if (alreadyConfirmed) {
+    throw new Error("Zakończenie tej rezerwacji zostało już przez Ciebie potwierdzone.");
+  }
+
+  const confirmationResult = await env.DB.prepare(
+    `UPDATE reservations
+     SET ${confirmationColumn} = datetime('now'), updated_at = datetime('now')
+     WHERE id = ?
+       AND status = 'accepted'
+       AND completed_at IS NULL
+       AND ${confirmationColumn} IS NULL`,
+  )
+    .bind(reservationId)
+    .run();
+
+  if (confirmationResult.meta.changes !== 1) {
+    throw new Error("Nie można potwierdzić zakończenia tej rezerwacji.");
+  }
+
+  const completionResult = await env.DB.prepare(
+    `UPDATE reservations
+     SET completed_at = datetime('now'), updated_at = datetime('now')
+     WHERE id = ?
+       AND status = 'accepted'
+       AND completed_at IS NULL
+       AND owner_completed_at IS NOT NULL
+       AND requester_completed_at IS NOT NULL`,
+  )
+    .bind(reservationId)
+    .run();
+
+  const completionState = await env.DB.prepare(
+    `SELECT completed_at
+     FROM reservations
+     WHERE id = ?
+     LIMIT 1`,
+  )
+    .bind(reservationId)
+    .first<{ completed_at: string | null }>();
+  const isCompleted = Boolean(completionState?.completed_at);
+
+  if (completionResult.meta.changes === 1) {
+    await createNotificationStatement(env.DB, {
       userId: recipientId,
       type: "reservation_completed",
       title: "Transakcja zakończona",
-      body: `Rezerwacja „${reservation.listing_title}” została oznaczona jako zakończona.`,
+      body: `Obie strony potwierdziły zakończenie rezerwacji „${reservation.listing_title}”.`,
       href: "/profil#rezerwacje",
-    }),
-  ]);
+    }).run();
 
-  queueReservationUpdates({
-    ctx,
-    env,
-    recipientId,
-    recipient: recipientEmail,
-    subject: `Rezerwacja zakończona: ${reservation.listing_title}`,
-    heading: "Rezerwacja zakończona",
-    body: `Rezerwacja „${reservation.listing_title}” została oznaczona jako zakończona.`,
-  });
+    queueReservationUpdates({
+      ctx,
+      env,
+      recipientId,
+      recipient: recipientEmail,
+      subject: `Rezerwacja zakończona: ${reservation.listing_title}`,
+      heading: "Rezerwacja zakończona",
+      body: `Obie strony potwierdziły zakończenie rezerwacji „${reservation.listing_title}”.`,
+    });
+  } else if (!isCompleted) {
+    await createNotificationStatement(env.DB, {
+      userId: recipientId,
+      type: "reservation_completed",
+      title: "Potwierdź zakończenie rezerwacji",
+      body: `${session.user.name} potwierdził(a) zakończenie rezerwacji „${reservation.listing_title}”. Potwierdź ją również w swoim profilu.`,
+      href: "/profil#rezerwacje",
+    }).run();
+
+    queueReservationUpdates({
+      ctx,
+      env,
+      recipientId,
+      recipient: recipientEmail,
+      subject: `Potwierdź zakończenie: ${reservation.listing_title}`,
+      heading: "Potwierdź zakończenie rezerwacji",
+      body: `${session.user.name} potwierdził(a) zakończenie rezerwacji „${reservation.listing_title}”. Potwierdź ją również w swoim profilu.`,
+    });
+  }
 
   revalidateReservationPages(reservation.listing_id);
-  redirect("/profil?rezerwacja=zakonczona#rezerwacje");
+  redirect(
+    `/profil?rezerwacja=${
+      isCompleted ? "zakonczona" : "potwierdzona"
+    }#rezerwacje`,
+  );
 }

@@ -20,6 +20,8 @@ export type Reservation = {
   end_time: string;
   note: string | null;
   status: ReservationStatus;
+  owner_completed_at: string | null;
+  requester_completed_at: string | null;
   completed_at: string | null;
   review_id: number | null;
   created_at: string;
@@ -44,6 +46,8 @@ const RESERVATION_COLUMNS = `
   reservations.end_time,
   reservations.note,
   reservations.status,
+  reservations.owner_completed_at,
+  reservations.requester_completed_at,
   reservations.completed_at,
   (
     SELECT reviews.id

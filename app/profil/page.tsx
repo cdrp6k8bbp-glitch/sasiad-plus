@@ -146,7 +146,13 @@ export default async function ProfilPage({
 
         {rezerwacja === "zakonczona" && (
           <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
-            ✓ Rezerwacja została oznaczona jako zakończona.
+            ✓ Obie strony potwierdziły zakończenie rezerwacji.
+          </p>
+        )}
+
+        {rezerwacja === "potwierdzona" && (
+          <p className="rounded-2xl bg-blue-100 px-5 py-4 font-bold text-blue-800">
+            ✓ Potwierdzenie zostało zapisane. Czekamy na drugą stronę.
           </p>
         )}
 

@@ -51,10 +51,22 @@ export default function ReservationCard({
       ? reservation.requester_name
       : reservation.owner_name;
   const isCompleted = Boolean(reservation.completed_at);
+  const hasConfirmedCompletion =
+    perspective === "owner"
+      ? Boolean(reservation.owner_completed_at)
+      : Boolean(reservation.requester_completed_at);
+  const isAwaitingCompletionConfirmation =
+    reservation.status === "accepted" &&
+    !isCompleted &&
+    Boolean(
+      reservation.owner_completed_at || reservation.requester_completed_at,
+    );
   const statusLabel = isCompleted
     ? "Zakończona"
+    : isAwaitingCompletionConfirmation
+      ? "Czeka na potwierdzenie"
     : STATUS_LABELS[reservation.status];
-  const statusStyle = isCompleted
+  const statusStyle = isCompleted || isAwaitingCompletionConfirmation
     ? "bg-blue-100 text-blue-800"
     : STATUS_STYLES[reservation.status];
 
@@ -125,15 +137,21 @@ export default function ReservationCard({
 
       {reservation.status === "accepted" && !isCompleted && (
         <div className="mt-4 flex flex-wrap gap-3">
-          <form action={completeReservation}>
-            <input type="hidden" name="reservation_id" value={reservation.id} />
-            <button
-              type="submit"
-              className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800"
-            >
-              ✓ Zakończ rezerwację
-            </button>
-          </form>
+          {hasConfirmedCompletion ? (
+            <p className="w-full rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
+              ✓ Potwierdziłeś(-aś) zakończenie. Czekamy na drugą stronę.
+            </p>
+          ) : (
+            <form action={completeReservation}>
+              <input type="hidden" name="reservation_id" value={reservation.id} />
+              <button
+                type="submit"
+                className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800"
+              >
+                ✓ Potwierdź zakończenie
+              </button>
+            </form>
+          )}
 
           <form action={cancelReservation}>
             <input type="hidden" name="reservation_id" value={reservation.id} />
