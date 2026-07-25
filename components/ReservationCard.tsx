@@ -135,17 +135,15 @@ export default function ReservationCard({
             </button>
           </form>
 
-          {perspective === "requester" && (
-            <form action={cancelReservation}>
-              <input type="hidden" name="reservation_id" value={reservation.id} />
-              <button
-                type="submit"
-                className="rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
-              >
-                Anuluj
-              </button>
-            </form>
-          )}
+          <form action={cancelReservation}>
+            <input type="hidden" name="reservation_id" value={reservation.id} />
+            <button
+              type="submit"
+              className="rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
+            >
+              Anuluj rezerwację
+            </button>
+          </form>
         </div>
       )}
 

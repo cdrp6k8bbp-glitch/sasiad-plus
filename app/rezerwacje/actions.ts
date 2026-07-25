@@ -516,36 +516,54 @@ export async function cancelReservation(formData: FormData): Promise<void> {
     `SELECT
        reservations.listing_id,
        reservations.owner_id,
+       reservations.requester_id,
        listings.title AS listing_title,
-       owner.email AS owner_email
+       owner.email AS owner_email,
+       requester.email AS requester_email
      FROM reservations
      JOIN listings ON listings.id = reservations.listing_id
      JOIN "user" AS owner ON owner.id = reservations.owner_id
-     WHERE reservations.id = ? AND reservations.requester_id = ?
+     JOIN "user" AS requester ON requester.id = reservations.requester_id
+     WHERE reservations.id = ?
+       AND (reservations.requester_id = ? OR reservations.owner_id = ?)
        AND reservations.status IN ('pending', 'accepted')
        AND reservations.completed_at IS NULL
      LIMIT 1`,
   )
-    .bind(reservationId, session.user.id)
+    .bind(reservationId, session.user.id, session.user.id)
     .first<{
       listing_id: number;
       owner_id: string;
+      requester_id: string;
       listing_title: string;
       owner_email: string;
+      requester_email: string;
     }>();
 
   if (!reservation) {
     throw new Error("Nie można anulować tej rezerwacji.");
   }
 
+  const recipientId =
+    session.user.id === reservation.owner_id
+      ? reservation.requester_id
+      : reservation.owner_id;
+  const recipientEmail =
+    session.user.id === reservation.owner_id
+      ? reservation.requester_email
+      : reservation.owner_email;
+
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE reservations
        SET status = 'cancelled', updated_at = datetime('now')
-       WHERE id = ? AND requester_id = ?`,
-    ).bind(reservationId, session.user.id),
+       WHERE id = ?
+         AND (requester_id = ? OR owner_id = ?)
+         AND status IN ('pending', 'accepted')
+         AND completed_at IS NULL`,
+    ).bind(reservationId, session.user.id, session.user.id),
     createNotificationStatement(env.DB, {
-      userId: reservation.owner_id,
+      userId: recipientId,
       type: "reservation_cancelled",
       title: "Rezerwacja anulowana",
       body: `${session.user.name} anulował(a) rezerwację „${reservation.listing_title}”.`,
@@ -556,8 +574,8 @@ export async function cancelReservation(formData: FormData): Promise<void> {
   queueReservationUpdates({
     ctx,
     env,
-    recipientId: reservation.owner_id,
-    recipient: reservation.owner_email,
+    recipientId,
+    recipient: recipientEmail,
     subject: `Rezerwacja anulowana: ${reservation.listing_title}`,
     heading: "Rezerwacja anulowana",
     body: `${session.user.name} anulował(a) rezerwację „${reservation.listing_title}”.`,
