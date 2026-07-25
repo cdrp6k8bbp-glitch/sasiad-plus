@@ -178,6 +178,8 @@ export default async function ListingPage({
                 className={`mt-6 rounded-2xl p-4 ${
                   isArchived
                     ? "bg-slate-100 text-slate-700"
+                    : isOwner
+                    ? "bg-blue-50 text-blue-800"
                     : listing.is_reserved
                     ? "bg-amber-50 text-amber-800"
                     : "bg-green-50 text-green-800"
@@ -186,6 +188,8 @@ export default async function ListingPage({
                 <p className="font-bold">
                   {isArchived
                     ? "📦 Ogłoszenie zarchiwizowane"
+                    : isOwner
+                    ? "👤 To Twoje ogłoszenie"
                     : listing.is_reserved
                     ? "📅 Niektóre terminy są zarezerwowane"
                     : "🟢 Dostępne"}
@@ -193,6 +197,8 @@ export default async function ListingPage({
                 <p className="mt-1 text-sm">
                   {isArchived
                     ? "Właściciel może je ponownie przywrócić."
+                    : isOwner
+                    ? "Prośby o rezerwację znajdziesz w swoim profilu."
                     : "Wybierz termin i wyślij prośbę do właściciela."}
                 </p>
               </div>
