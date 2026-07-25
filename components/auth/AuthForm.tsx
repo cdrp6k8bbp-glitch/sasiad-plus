@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { signIn, signUp } from "@/lib/auth-client";
 import TurnstileWidget, {
   resetTurnstile,
@@ -18,7 +17,6 @@ const fieldClassName =
   "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100";
 
 export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,8 +97,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
         return;
       }
 
-      router.push(redirectTo);
-      router.refresh();
+      window.location.assign(redirectTo);
     } catch {
       setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
     } finally {

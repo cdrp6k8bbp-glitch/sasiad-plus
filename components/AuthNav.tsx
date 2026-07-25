@@ -2,14 +2,28 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { signOut, useSession } from "@/lib/auth-client";
 
 export default function AuthNav() {
-  const router = useRouter();
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending, refetch } = useSession();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  useEffect(() => {
+    function refreshSession() {
+      void refetch();
+    }
+
+    refreshSession();
+    window.addEventListener("focus", refreshSession);
+    window.addEventListener("pageshow", refreshSession);
+
+    return () => {
+      window.removeEventListener("focus", refreshSession);
+      window.removeEventListener("pageshow", refreshSession);
+    };
+  }, [refetch]);
 
   useEffect(() => {
     if (!session) return;
@@ -142,14 +156,25 @@ export default function AuthNav() {
 
       <button
         type="button"
+        disabled={isSigningOut}
         onClick={async () => {
-          await signOut();
-          router.push("/");
-          router.refresh();
+          if (isSigningOut) return;
+
+          setIsSigningOut(true);
+          const result = await signOut();
+
+          if (result.error) {
+            setIsSigningOut(false);
+            await refetch();
+            window.alert("Nie udało się wylogować. Spróbuj ponownie.");
+            return;
+          }
+
+          window.location.replace("/");
         }}
-        className="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 sm:inline-flex"
+        className="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60 sm:inline-flex"
       >
-        Wyloguj
+        {isSigningOut ? "Wylogowywanie…" : "Wyloguj"}
       </button>
     </div>
   );
