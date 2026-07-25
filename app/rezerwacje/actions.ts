@@ -7,8 +7,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { sendReservationUpdateEmail } from "@/lib/email";
 import { createNotificationStatement } from "@/lib/notifications";
+import { sendPushNotification, type PushEnv } from "@/lib/push";
 
-type ReservationEmailEnv = CloudflareEnv & {
+type ReservationNotificationEnv = PushEnv & {
   BETTER_AUTH_URL: string;
   RESEND_API_KEY: string;
 };
@@ -67,16 +68,18 @@ function revalidateReservationPages(listingId: number) {
   revalidatePath(`/ogloszenie/${listingId}`);
 }
 
-function queueReservationEmail({
+function queueReservationUpdates({
   ctx,
   env,
+  recipientId,
   recipient,
   subject,
   heading,
   body,
 }: {
   ctx: ExecutionContext;
-  env: ReservationEmailEnv;
+  env: ReservationNotificationEnv;
+  recipientId: string;
   recipient: string;
   subject: string;
   heading: string;
@@ -96,6 +99,23 @@ function queueReservationEmail({
       console.error(
         JSON.stringify({
           event: "reservation_email_background_failed",
+          message: error instanceof Error ? error.message : "unknown_error",
+        }),
+      );
+    }),
+  );
+
+  ctx.waitUntil(
+    sendPushNotification(env, {
+      userId: recipientId,
+      title: heading,
+      body,
+      url: "/profil#rezerwacje",
+      tag: `reservation-${heading.toLowerCase().replaceAll(" ", "-")}`,
+    }).catch((error: unknown) => {
+      console.error(
+        JSON.stringify({
+          event: "reservation_push_background_failed",
           message: error instanceof Error ? error.message : "unknown_error",
         }),
       );
@@ -138,7 +158,7 @@ export async function createReservation(formData: FormData): Promise<void> {
   }
 
   const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
-  const env = cloudflareEnv as ReservationEmailEnv;
+  const env = cloudflareEnv as ReservationNotificationEnv;
   const listing = await env.DB.prepare(
     `SELECT
        listings.owner_id,
@@ -233,9 +253,10 @@ export async function createReservation(formData: FormData): Promise<void> {
     href: "/profil#rezerwacje",
   }).run();
 
-  queueReservationEmail({
+  queueReservationUpdates({
     ctx,
     env,
+    recipientId: listing.owner_id,
     recipient: listing.owner_email,
     subject: `Nowa prośba o rezerwację: ${listing.title}`,
     heading: "Nowa prośba o rezerwację",
@@ -260,7 +281,7 @@ export async function respondToReservation(formData: FormData): Promise<void> {
   }
 
   const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
-  const env = cloudflareEnv as ReservationEmailEnv;
+  const env = cloudflareEnv as ReservationNotificationEnv;
   const reservation = await env.DB.prepare(
     `SELECT
        reservations.id,
@@ -389,9 +410,10 @@ export async function respondToReservation(formData: FormData): Promise<void> {
   }).run();
 
   const responseAccepted = response === "accepted";
-  queueReservationEmail({
+  queueReservationUpdates({
     ctx,
     env,
+    recipientId: reservation.requester_id,
     recipient: reservation.requester_email,
     subject: responseAccepted
       ? `Rezerwacja zaakceptowana: ${reservation.listing_title}`
@@ -425,7 +447,7 @@ export async function cancelReservation(formData: FormData): Promise<void> {
   }
 
   const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
-  const env = cloudflareEnv as ReservationEmailEnv;
+  const env = cloudflareEnv as ReservationNotificationEnv;
   const reservation = await env.DB.prepare(
     `SELECT
        reservations.listing_id,
@@ -467,9 +489,10 @@ export async function cancelReservation(formData: FormData): Promise<void> {
     }),
   ]);
 
-  queueReservationEmail({
+  queueReservationUpdates({
     ctx,
     env,
+    recipientId: reservation.owner_id,
     recipient: reservation.owner_email,
     subject: `Rezerwacja anulowana: ${reservation.listing_title}`,
     heading: "Rezerwacja anulowana",
@@ -493,7 +516,7 @@ export async function completeReservation(formData: FormData): Promise<void> {
   }
 
   const { env: cloudflareEnv, ctx } = await getCloudflareContext({ async: true });
-  const env = cloudflareEnv as ReservationEmailEnv;
+  const env = cloudflareEnv as ReservationNotificationEnv;
   const reservation = await env.DB.prepare(
     `SELECT
        reservations.listing_id,
@@ -550,9 +573,10 @@ export async function completeReservation(formData: FormData): Promise<void> {
     }),
   ]);
 
-  queueReservationEmail({
+  queueReservationUpdates({
     ctx,
     env,
+    recipientId,
     recipient: recipientEmail,
     subject: `Rezerwacja zakończona: ${reservation.listing_title}`,
     heading: "Rezerwacja zakończona",

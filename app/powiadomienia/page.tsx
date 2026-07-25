@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AuthNav from "@/components/AuthNav";
+import PushNotificationsCard from "@/components/PushNotificationsCard";
 import { auth } from "@/lib/auth";
 import { getNotificationsForUser } from "@/lib/notifications";
 import { markAllNotificationsRead, openNotification } from "./actions";
@@ -70,6 +71,8 @@ export default async function NotificationsPage() {
             </form>
           )}
         </div>
+
+        <PushNotificationsCard />
 
         {notifications.length === 0 ? (
           <section className="mt-8 rounded-[32px] border border-dashed border-slate-300 bg-white p-10 text-center">
