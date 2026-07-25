@@ -180,23 +180,6 @@ export async function createReservation(formData: FormData): Promise<void> {
     throw new Error("Nie można rezerwować własnego ogłoszenia.");
   }
 
-  const currentRequest = await env.DB.prepare(
-    `SELECT id
-     FROM reservations
-     WHERE listing_id = ?
-       AND requester_id = ?
-       AND status IN ('pending', 'accepted')
-       AND completed_at IS NULL
-       AND end_date >= date('now')
-     LIMIT 1`,
-  )
-    .bind(listingId, session.user.id)
-    .first<{ id: number }>();
-
-  if (currentRequest) {
-    throw new Error("Masz już aktywną prośbę dotyczącą tego ogłoszenia.");
-  }
-
   const insertResult = await env.DB.prepare(
     `INSERT INTO reservations (
        listing_id,
@@ -217,6 +200,16 @@ export async function createReservation(formData: FormData): Promise<void> {
          AND conflicting.completed_at IS NULL
          AND datetime(conflicting.start_date || ' ' || conflicting.start_time) < datetime(?)
          AND datetime(conflicting.end_date || ' ' || conflicting.end_time) > datetime(?)
+     )
+     AND NOT EXISTS (
+       SELECT 1
+       FROM reservations AS requester_conflict
+       WHERE requester_conflict.listing_id = ?
+         AND requester_conflict.requester_id = ?
+         AND requester_conflict.status IN ('pending', 'accepted')
+         AND requester_conflict.completed_at IS NULL
+         AND datetime(requester_conflict.start_date || ' ' || requester_conflict.start_time) < datetime(?)
+         AND datetime(requester_conflict.end_date || ' ' || requester_conflict.end_time) > datetime(?)
      )`,
   )
     .bind(
@@ -231,11 +224,17 @@ export async function createReservation(formData: FormData): Promise<void> {
       listingId,
       endDateTime,
       startDateTime,
+      listingId,
+      session.user.id,
+      endDateTime,
+      startDateTime,
     )
     .run();
 
   if (insertResult.meta.changes !== 1) {
-    throw new Error("Wybrany termin jest już zarezerwowany.");
+    throw new Error(
+      "Wybrany termin jest już zajęty albo pokrywa się z Twoją inną rezerwacją.",
+    );
   }
 
   const reservationPeriod = formatReservationPeriod(

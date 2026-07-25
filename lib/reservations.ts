@@ -95,12 +95,12 @@ export async function getReservationsForRequester(
   return result.results;
 }
 
-export async function getActiveReservationForListingAndUser(
+export async function getActiveReservationsForListingAndUser(
   listingId: number,
   userId: string,
-): Promise<Reservation | null> {
+): Promise<Reservation[]> {
   const { env } = await getCloudflareContext({ async: true });
-  const reservation = await env.DB.prepare(
+  const result = await env.DB.prepare(
     `SELECT ${RESERVATION_COLUMNS}
      ${RESERVATION_SOURCE}
      WHERE reservations.listing_id = ?
@@ -108,13 +108,13 @@ export async function getActiveReservationForListingAndUser(
        AND reservations.status IN ('pending', 'accepted')
        AND reservations.completed_at IS NULL
        AND reservations.end_date >= date('now')
-     ORDER BY reservations.created_at DESC
-     LIMIT 1`,
+     ORDER BY reservations.start_date, reservations.start_time
+     LIMIT 20`,
   )
     .bind(listingId, userId)
-    .first<Reservation>();
+    .all<Reservation>();
 
-  return reservation ?? null;
+  return result.results;
 }
 
 export async function getAcceptedReservationSlotsForListing(

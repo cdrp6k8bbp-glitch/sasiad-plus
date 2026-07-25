@@ -16,7 +16,7 @@ import {
 } from "@/app/rezerwacje/actions";
 import {
   getAcceptedReservationSlotsForListing,
-  getActiveReservationForListingAndUser,
+  getActiveReservationsForListingAndUser,
 } from "@/lib/reservations";
 import { getReviewSummary } from "@/lib/reviews";
 import { reportListing } from "@/app/zgloszenia/actions";
@@ -63,14 +63,14 @@ export default async function ListingPage({
   const isFavorite = session
     ? (await getFavoriteListingIds(session.user.id)).includes(listing.id)
     : false;
-  const activeReservation = session && !isOwner
-    ? await getActiveReservationForListingAndUser(
+  const activeReservations = session && !isOwner
+    ? await getActiveReservationsForListingAndUser(
         listing.id,
         session.user.id,
       )
-    : null;
+    : [];
   const acceptedReservationSlots =
-    listing.owner_id && !isOwner && !isArchived && !activeReservation
+    listing.owner_id && !isOwner && !isArchived
       ? await getAcceptedReservationSlotsForListing(listing.id)
       : [];
   const imageKeys = parseListingImageKeys(
@@ -248,131 +248,149 @@ export default async function ListingPage({
                     >
                       Zaloguj się, aby zarezerwować
                     </Link>
-                  ) : activeReservation ? (
-                    <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-blue-900">
-                      <p className="font-black">
-                        {activeReservation.status === "accepted"
-                          ? "✓ Rezerwacja zaakceptowana"
-                          : "⏳ Prośba oczekuje na odpowiedź"}
-                      </p>
-                      <p className="mt-2 text-sm font-semibold">
-                        {activeReservation.start_date}, {activeReservation.start_time}
-                        {" – "}
-                        {activeReservation.end_date}, {activeReservation.end_time}
-                      </p>
-                      <form action={cancelReservation} className="mt-3">
-                        <input
-                          type="hidden"
-                          name="reservation_id"
-                          value={activeReservation.id}
-                        />
-                        <button
-                          type="submit"
-                          className="text-sm font-bold text-red-700 hover:underline"
-                        >
-                          Anuluj rezerwację
-                        </button>
-                      </form>
-                    </div>
                   ) : (
-                    <form action={createReservation} className="mt-4 space-y-3">
-                      <input type="hidden" name="listing_id" value={listing.id} />
-                      <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
-                        Wybierz dzień i godziny w czasie lokalnym. Dostępne są
-                        przedziały co 30 minut.
-                      </p>
-                      {acceptedReservationSlots.length > 0 && (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                          <p className="text-sm font-black text-amber-900">
-                            Już zajęte terminy
-                          </p>
-                          <ul className="mt-2 space-y-1 text-sm font-semibold text-amber-800">
-                            {acceptedReservationSlots.map((slot) => (
-                              <li key={slot.id}>
-                                {slot.start_date}, {slot.start_time}
-                                {" – "}
-                                {slot.end_date}, {slot.end_time}
-                              </li>
+                    <>
+                      {activeReservations.length > 0 && (
+                        <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-blue-900">
+                          <p className="font-black">Twoje bieżące rezerwacje</p>
+                          <div className="mt-3 space-y-3">
+                            {activeReservations.map((reservation) => (
+                              <div
+                                key={reservation.id}
+                                className="border-t border-blue-200 pt-3 first:border-0 first:pt-0"
+                              >
+                                <p className="text-sm font-black">
+                                  {reservation.status === "accepted"
+                                    ? "✓ Rezerwacja zaakceptowana"
+                                    : "⏳ Prośba oczekuje na odpowiedź"}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold">
+                                  {reservation.start_date}, {reservation.start_time}
+                                  {" – "}
+                                  {reservation.end_date}, {reservation.end_time}
+                                </p>
+                                <form action={cancelReservation} className="mt-2">
+                                  <input
+                                    type="hidden"
+                                    name="reservation_id"
+                                    value={reservation.id}
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="text-sm font-bold text-red-700 hover:underline"
+                                  >
+                                    Anuluj rezerwację
+                                  </button>
+                                </form>
+                              </div>
                             ))}
-                          </ul>
+                          </div>
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="start_date" className="text-sm font-bold text-slate-700">
-                            Dzień od
-                          </label>
-                          <input
-                            id="start_date"
-                            name="start_date"
-                            type="date"
-                            min={new Date().toISOString().slice(0, 10)}
-                            required
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                          />
+                      <form action={createReservation} className="mt-4 space-y-3">
+                        <input type="hidden" name="listing_id" value={listing.id} />
+                        {activeReservations.length > 0 && (
+                          <p className="font-black text-slate-800">
+                            Wybierz kolejny termin
+                          </p>
+                        )}
+                        <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
+                          Wybierz dzień i godziny w czasie lokalnym. Dostępne są
+                          przedziały co 30 minut.
+                        </p>
+                        {acceptedReservationSlots.length > 0 && (
+                          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                            <p className="text-sm font-black text-amber-900">
+                              Już zajęte terminy
+                            </p>
+                            <ul className="mt-2 space-y-1 text-sm font-semibold text-amber-800">
+                              {acceptedReservationSlots.map((slot) => (
+                                <li key={slot.id}>
+                                  {slot.start_date}, {slot.start_time}
+                                  {" – "}
+                                  {slot.end_date}, {slot.end_time}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label htmlFor="start_date" className="text-sm font-bold text-slate-700">
+                              Dzień od
+                            </label>
+                            <input
+                              id="start_date"
+                              name="start_date"
+                              type="date"
+                              min={new Date().toISOString().slice(0, 10)}
+                              required
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="end_date" className="text-sm font-bold text-slate-700">
+                              Dzień do
+                            </label>
+                            <input
+                              id="end_date"
+                              name="end_date"
+                              type="date"
+                              min={new Date().toISOString().slice(0, 10)}
+                              required
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="start_time" className="text-sm font-bold text-slate-700">
+                              Godzina od
+                            </label>
+                            <input
+                              id="start_time"
+                              name="start_time"
+                              type="time"
+                              step={1800}
+                              defaultValue="09:00"
+                              required
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="end_time" className="text-sm font-bold text-slate-700">
+                              Godzina do
+                            </label>
+                            <input
+                              id="end_time"
+                              name="end_time"
+                              type="time"
+                              step={1800}
+                              defaultValue="17:00"
+                              required
+                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                            />
+                          </div>
                         </div>
                         <div>
-                          <label htmlFor="end_date" className="text-sm font-bold text-slate-700">
-                            Dzień do
+                          <label htmlFor="reservation_note" className="text-sm font-bold text-slate-700">
+                            Wiadomość (opcjonalnie)
                           </label>
-                          <input
-                            id="end_date"
-                            name="end_date"
-                            type="date"
-                            min={new Date().toISOString().slice(0, 10)}
-                            required
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
+                          <textarea
+                            id="reservation_note"
+                            name="note"
+                            rows={3}
+                            maxLength={500}
+                            placeholder="Np. odbiór po godzinie 17"
+                            className="mt-1 w-full resize-none rounded-xl border border-slate-300 p-3"
                           />
                         </div>
-                        <div>
-                          <label htmlFor="start_time" className="text-sm font-bold text-slate-700">
-                            Godzina od
-                          </label>
-                          <input
-                            id="start_time"
-                            name="start_time"
-                            type="time"
-                            step={1800}
-                            defaultValue="09:00"
-                            required
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="end_time" className="text-sm font-bold text-slate-700">
-                            Godzina do
-                          </label>
-                          <input
-                            id="end_time"
-                            name="end_time"
-                            type="time"
-                            step={1800}
-                            defaultValue="17:00"
-                            required
-                            className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="reservation_note" className="text-sm font-bold text-slate-700">
-                          Wiadomość (opcjonalnie)
-                        </label>
-                        <textarea
-                          id="reservation_note"
-                          name="note"
-                          rows={3}
-                          maxLength={500}
-                          placeholder="Np. odbiór po godzinie 17"
-                          className="mt-1 w-full resize-none rounded-xl border border-slate-300 p-3"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full rounded-2xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800"
-                      >
-                        Wyślij prośbę o rezerwację
-                      </button>
-                    </form>
+                        <button
+                          type="submit"
+                          className="w-full rounded-2xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800"
+                        >
+                          Wyślij prośbę o rezerwację
+                        </button>
+                      </form>
+                    </>
                   )}
                 </div>
               )}
