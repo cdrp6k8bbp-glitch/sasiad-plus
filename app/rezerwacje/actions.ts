@@ -323,6 +323,15 @@ export async function respondToReservation(formData: FormData): Promise<void> {
     throw new Error("Ta prośba została już rozpatrzona.");
   }
 
+  let automaticallyRejected: Array<{
+    requester_id: string;
+    requester_email: string;
+    start_date: string;
+    end_date: string;
+    start_time: string;
+    end_time: string;
+  }> = [];
+
   if (response === "accepted") {
     const startDateTime = reservationDateTime(
       reservation.start_date,
@@ -365,14 +374,21 @@ export async function respondToReservation(formData: FormData): Promise<void> {
       );
     }
 
-    await env.DB.prepare(
-      `UPDATE reservations
-       SET status = 'rejected', updated_at = datetime('now')
-       WHERE listing_id = ?
-         AND id != ?
-         AND status = 'pending'
-         AND datetime(start_date || ' ' || start_time) < datetime(?)
-         AND datetime(end_date || ' ' || end_time) > datetime(?)`,
+    const conflictingResult = await env.DB.prepare(
+      `SELECT
+         conflicting.requester_id,
+         requester.email AS requester_email,
+         conflicting.start_date,
+         conflicting.end_date,
+         conflicting.start_time,
+         conflicting.end_time
+       FROM reservations AS conflicting
+       JOIN "user" AS requester ON requester.id = conflicting.requester_id
+       WHERE conflicting.listing_id = ?
+         AND conflicting.id != ?
+         AND conflicting.status = 'pending'
+         AND datetime(conflicting.start_date || ' ' || conflicting.start_time) < datetime(?)
+         AND datetime(conflicting.end_date || ' ' || conflicting.end_time) > datetime(?)`,
     )
       .bind(
         reservation.listing_id,
@@ -380,7 +396,37 @@ export async function respondToReservation(formData: FormData): Promise<void> {
         endDateTime,
         startDateTime,
       )
-      .run();
+      .all<(typeof automaticallyRejected)[number]>();
+
+    automaticallyRejected = conflictingResult.results;
+
+    if (automaticallyRejected.length > 0) {
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE reservations
+           SET status = 'rejected', updated_at = datetime('now')
+           WHERE listing_id = ?
+             AND id != ?
+             AND status = 'pending'
+             AND datetime(start_date || ' ' || start_time) < datetime(?)
+             AND datetime(end_date || ' ' || end_time) > datetime(?)`,
+        ).bind(
+          reservation.listing_id,
+          reservation.id,
+          endDateTime,
+          startDateTime,
+        ),
+        ...automaticallyRejected.map((conflicting) =>
+          createNotificationStatement(env.DB, {
+            userId: conflicting.requester_id,
+            type: "reservation_rejected",
+            title: "Termin rezerwacji jest już zajęty",
+            body: `Termin Twojej prośby dotyczącej „${reservation.listing_title}” został zajęty przez inną zaakceptowaną rezerwację. Wybierz inny termin.`,
+            href: `/ogloszenie/${reservation.listing_id}`,
+          }),
+        ),
+      ]);
+    }
   } else {
     await env.DB.prepare(
       `UPDATE reservations
@@ -424,6 +470,25 @@ export async function respondToReservation(formData: FormData): Promise<void> {
       ? `Twoja rezerwacja „${reservation.listing_title}” została zaakceptowana.`
       : `Twoja prośba dotycząca „${reservation.listing_title}” została odrzucona.`,
   });
+
+  for (const conflicting of automaticallyRejected) {
+    const conflictingPeriod = formatReservationPeriod(
+      conflicting.start_date,
+      conflicting.start_time,
+      conflicting.end_date,
+      conflicting.end_time,
+    );
+
+    queueReservationUpdates({
+      ctx,
+      env,
+      recipientId: conflicting.requester_id,
+      recipient: conflicting.requester_email,
+      subject: `Termin jest już zajęty: ${reservation.listing_title}`,
+      heading: "Termin rezerwacji jest już zajęty",
+      body: `Termin ${conflictingPeriod} w rezerwacji „${reservation.listing_title}” został zajęty przez inną zaakceptowaną rezerwację. Wybierz inny termin.`,
+    });
+  }
 
   revalidateReservationPages(reservation.listing_id);
   redirect(
