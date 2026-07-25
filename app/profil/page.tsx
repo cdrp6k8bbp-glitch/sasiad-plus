@@ -72,7 +72,7 @@ export default async function ProfilPage({
             Sąsiad+
           </Link>
 
-          <AuthNav />
+          <AuthNav userName={session.user.name} />
         </div>
       </header>
 

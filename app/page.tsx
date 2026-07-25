@@ -116,7 +116,7 @@ export default async function Home({
               + Dodaj ogłoszenie
             </Link>
 
-            <AuthNav />
+            <AuthNav userName={session?.user.name ?? null} />
           </nav>
 
           <div className="flex items-center gap-2 md:hidden">
@@ -127,7 +127,7 @@ export default async function Home({
               + Dodaj
             </Link>
 
-            <AuthNav />
+            <AuthNav userName={session?.user.name ?? null} />
           </div>
         </div>
       </header>

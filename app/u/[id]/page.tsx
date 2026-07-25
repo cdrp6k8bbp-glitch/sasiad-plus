@@ -75,7 +75,7 @@ export default async function PublicProfilePage({
           <Link href="/" className="text-2xl font-black text-green-700">
             Sąsiad+
           </Link>
-          <AuthNav />
+          <AuthNav userName={session?.user.name ?? null} />
         </div>
       </header>
 

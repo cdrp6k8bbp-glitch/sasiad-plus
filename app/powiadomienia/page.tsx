@@ -40,7 +40,7 @@ export default async function NotificationsPage() {
           <Link href="/" className="text-2xl font-black text-green-700">
             Sąsiad+
           </Link>
-          <AuthNav />
+          <AuthNav userName={session.user.name} />
         </div>
       </header>
 

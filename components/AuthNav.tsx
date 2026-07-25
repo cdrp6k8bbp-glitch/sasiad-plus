@@ -2,31 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { signOut, useSession } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 
-export default function AuthNav() {
-  const { data: session, isPending, refetch } = useSession();
+export default function AuthNav({ userName }: { userName: string | null }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
-    function refreshSession() {
-      void refetch();
-    }
-
-    refreshSession();
-    window.addEventListener("focus", refreshSession);
-    window.addEventListener("pageshow", refreshSession);
-
-    return () => {
-      window.removeEventListener("focus", refreshSession);
-      window.removeEventListener("pageshow", refreshSession);
-    };
-  }, [refetch]);
-
-  useEffect(() => {
-    if (!session) return;
+    if (!userName) return;
 
     let isActive = true;
 
@@ -64,18 +48,9 @@ export default function AuthNav() {
       isActive = false;
       window.clearInterval(intervalId);
     };
-  }, [session]);
+  }, [userName]);
 
-  if (isPending) {
-    return (
-      <span
-        aria-label="Sprawdzanie sesji"
-        className="h-10 w-24 animate-pulse rounded-full bg-slate-100"
-      />
-    );
-  }
-
-  if (!session) {
+  if (!userName) {
     return (
       <div className="flex items-center gap-2">
         <Link
@@ -151,7 +126,7 @@ export default function AuthNav() {
         href="/profil"
         className="max-w-36 truncate rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-800 transition hover:bg-green-100"
       >
-        {session.user.name}
+        {userName}
       </Link>
 
       <button
@@ -165,7 +140,6 @@ export default function AuthNav() {
 
           if (result.error) {
             setIsSigningOut(false);
-            await refetch();
             window.alert("Nie udało się wylogować. Spróbuj ponownie.");
             return;
           }
