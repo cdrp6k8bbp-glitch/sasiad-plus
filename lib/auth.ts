@@ -11,6 +11,12 @@ import {
   TURNSTILE_ERROR_MESSAGE,
   verifyTurnstileRequest,
 } from "@/lib/turnstile";
+import {
+  LEGAL_ACCEPTANCE_ERROR_CODE,
+  LEGAL_ACCEPTANCE_ERROR_MESSAGE,
+  PRIVACY_POLICY_VERSION,
+  TERMS_VERSION,
+} from "@/lib/legal";
 
 type AuthEnv = CloudflareEnv & {
   BETTER_AUTH_SECRET: string;
@@ -27,6 +33,31 @@ export const auth = betterAuth({
 
   hooks: {
     before: createAuthMiddleware(async (context) => {
+      if (context.path === "/sign-up/email") {
+        if (context.body.legalAcceptance !== true) {
+          throw APIError.from("BAD_REQUEST", {
+            code: LEGAL_ACCEPTANCE_ERROR_CODE,
+            message: LEGAL_ACCEPTANCE_ERROR_MESSAGE,
+          });
+        }
+
+        context.body.termsAcceptedVersion = TERMS_VERSION;
+        context.body.privacyAcknowledgedVersion = PRIVACY_POLICY_VERSION;
+        context.body.legalAcceptedAt = new Date();
+      }
+
+      if (
+        context.path === "/update-user" &&
+        (context.body.termsAcceptedVersion !== undefined ||
+          context.body.privacyAcknowledgedVersion !== undefined ||
+          context.body.legalAcceptedAt !== undefined)
+      ) {
+        throw APIError.from("FORBIDDEN", {
+          code: "LEGAL_ACCEPTANCE_IMMUTABLE",
+          message: "Danych akceptacji dokumentów nie można zmieniać.",
+        });
+      }
+
       if (
         ![
           "/sign-in/email",
@@ -53,6 +84,23 @@ export const auth = betterAuth({
   },
 
   user: {
+    additionalFields: {
+      termsAcceptedVersion: {
+        type: "string",
+        required: false,
+        returned: false,
+      },
+      privacyAcknowledgedVersion: {
+        type: "string",
+        required: false,
+        returned: false,
+      },
+      legalAcceptedAt: {
+        type: "date",
+        required: false,
+        returned: false,
+      },
+    },
     deleteUser: {
       enabled: true,
       beforeDelete: async (user) => {

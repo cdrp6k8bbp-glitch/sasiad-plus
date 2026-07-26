@@ -4,6 +4,11 @@ import {
   LegalSection,
   legalListClassName,
 } from "@/components/legal/LegalPage";
+import {
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_EFFECTIVE_DATE,
+  PRIVACY_POLICY_VERSION,
+} from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Polityka prywatności | Sąsiad+",
@@ -13,7 +18,7 @@ export const metadata: Metadata = {
 export default function PolitykaPrywatnosciPage() {
   return (
     <LegalPage
-      eyebrow="Wersja 1.0 · obowiązuje od 21 lipca 2026 r."
+      eyebrow={`Wersja ${PRIVACY_POLICY_VERSION} · obowiązuje od ${LEGAL_EFFECTIVE_DATE}`}
       title="Polityka prywatności"
       intro="Poniżej wyjaśniamy, jakie dane przetwarzamy, dlaczego są potrzebne i jakie prawa przysługują użytkownikom Sąsiad+."
     >
@@ -24,7 +29,13 @@ export default function PolitykaPrywatnosciPage() {
         </p>
         <p>
           W sprawach dotyczących prywatności można napisać na
-          <a className="ml-1 font-bold text-green-700 underline" href="mailto:korczm8@gmail.com">korczm8@gmail.com</a>.
+          <a
+            className="ml-1 font-bold text-green-700 underline"
+            href={`mailto:${LEGAL_CONTACT_EMAIL}`}
+          >
+            {LEGAL_CONTACT_EMAIL}
+          </a>
+          .
           Administrator nie wyznaczył inspektora ochrony danych.
         </p>
       </LegalSection>

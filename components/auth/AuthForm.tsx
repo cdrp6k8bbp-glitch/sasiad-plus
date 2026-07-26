@@ -7,6 +7,11 @@ import TurnstileWidget, {
   resetTurnstile,
   TURNSTILE_ERROR_CODE,
 } from "@/components/auth/TurnstileWidget";
+import {
+  LEGAL_ACCEPTANCE_ERROR_CODE,
+  PRIVACY_POLICY_VERSION,
+  TERMS_VERSION,
+} from "@/lib/legal";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -31,6 +36,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const legalAcceptance = formData.get("legalAcceptance") === "on";
     const turnstileToken = String(
       formData.get("cf-turnstile-response") ?? "",
     ).trim();
@@ -48,16 +54,21 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
     }
 
     try {
+      const registrationPayload = {
+        name: String(formData.get("name") ?? "").trim(),
+        email,
+        password,
+        legalAcceptance,
+        termsAcceptedVersion: TERMS_VERSION,
+        privacyAcknowledgedVersion: PRIVACY_POLICY_VERSION,
+        callbackURL: redirectTo,
+        fetchOptions: {
+          headers: { "x-turnstile-token": turnstileToken },
+        },
+      };
+
       const result = isRegister
-        ? await signUp.email({
-            name: String(formData.get("name") ?? "").trim(),
-            email,
-            password,
-            callbackURL: redirectTo,
-            fetchOptions: {
-              headers: { "x-turnstile-token": turnstileToken },
-            },
-          })
+        ? await signUp.email(registrationPayload)
         : await signIn.email({
             email,
             password,
@@ -67,6 +78,13 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
           });
 
       if (result.error) {
+        if (result.error.code === LEGAL_ACCEPTANCE_ERROR_CODE) {
+          setError(
+            "Aby założyć konto, zaakceptuj regulamin i potwierdź zapoznanie się z polityką prywatności.",
+          );
+          return;
+        }
+
         if (result.error.code === TURNSTILE_ERROR_CODE) {
           setError(
             "Weryfikacja bezpieczeństwa nie powiodła się. Spróbuj ponownie.",

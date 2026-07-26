@@ -4,6 +4,11 @@ import {
   LegalSection,
   legalListClassName,
 } from "@/components/legal/LegalPage";
+import {
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_EFFECTIVE_DATE,
+  TERMS_VERSION,
+} from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Regulamin | Sąsiad+",
@@ -13,7 +18,7 @@ export const metadata: Metadata = {
 export default function RegulaminPage() {
   return (
     <LegalPage
-      eyebrow="Wersja 1.0 · obowiązuje od 21 lipca 2026 r."
+      eyebrow={`Wersja ${TERMS_VERSION} · obowiązuje od ${LEGAL_EFFECTIVE_DATE}`}
       title="Regulamin platformy Sąsiad+"
       intro="Ten dokument określa zasady bezpłatnego korzystania z platformy, publikowania ogłoszeń i kontaktowania się z innymi użytkownikami."
     >
@@ -24,7 +29,14 @@ export default function RegulaminPage() {
         </p>
         <p>
           Kontakt, reklamacje oraz zgłoszenia dotyczące działania platformy lub
-          treści: <a className="font-bold text-green-700 underline" href="mailto:korczm8@gmail.com">korczm8@gmail.com</a>.
+          treści:{" "}
+          <a
+            className="font-bold text-green-700 underline"
+            href={`mailto:${LEGAL_CONTACT_EMAIL}`}
+          >
+            {LEGAL_CONTACT_EMAIL}
+          </a>
+          .
         </p>
       </LegalSection>
 
