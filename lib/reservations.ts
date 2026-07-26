@@ -23,7 +23,8 @@ export type Reservation = {
   owner_completed_at: string | null;
   requester_completed_at: string | null;
   completed_at: string | null;
-  review_id: number | null;
+  owner_review_id: number | null;
+  requester_review_id: number | null;
   created_at: string;
 };
 
@@ -53,8 +54,16 @@ const RESERVATION_COLUMNS = `
     SELECT reviews.id
     FROM reviews
     WHERE reviews.reservation_id = reservations.id
+      AND reviews.reviewer_id = reservations.owner_id
     LIMIT 1
-  ) AS review_id,
+  ) AS owner_review_id,
+  (
+    SELECT reviews.id
+    FROM reviews
+    WHERE reviews.reservation_id = reservations.id
+      AND reviews.reviewer_id = reservations.requester_id
+    LIMIT 1
+  ) AS requester_review_id,
   reservations.created_at
 `;
 

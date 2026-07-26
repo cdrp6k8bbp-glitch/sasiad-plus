@@ -51,6 +51,10 @@ export default function ReservationCard({
       ? reservation.requester_name
       : reservation.owner_name;
   const isCompleted = Boolean(reservation.completed_at);
+  const reviewId =
+    perspective === "owner"
+      ? reservation.owner_review_id
+      : reservation.requester_review_id;
   const hasConfirmedCompletion =
     perspective === "owner"
       ? Boolean(reservation.owner_completed_at)
@@ -165,12 +169,12 @@ export default function ReservationCard({
         </div>
       )}
 
-      {perspective === "requester" && isCompleted && !reservation.review_id && (
+      {isCompleted && !reviewId && (
         <form action={createReview} className="mt-4 space-y-3 rounded-2xl bg-white p-4">
           <input type="hidden" name="reservation_id" value={reservation.id} />
           <div>
             <label htmlFor={`rating-${reservation.id}`} className="text-sm font-bold text-slate-700">
-              Twoja ocena
+              Twoja ocena dla: {otherPerson}
             </label>
             <select
               id={`rating-${reservation.id}`}
@@ -211,7 +215,7 @@ export default function ReservationCard({
         </form>
       )}
 
-      {perspective === "requester" && isCompleted && reservation.review_id && (
+      {isCompleted && reviewId && (
         <p className="mt-4 text-sm font-bold text-green-700">
           ✓ Opinia została wystawiona
         </p>

@@ -50,37 +50,61 @@ export async function createReview(formData: FormData): Promise<void> {
 
   if (
     !reservation ||
-    reservation.requester_id !== session.user.id ||
     reservation.status !== "accepted" ||
     !reservation.completed_at
   ) {
     throw new Error("Nie możesz ocenić tej rezerwacji.");
   }
 
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT INTO reviews (
-         reservation_id, listing_id, reviewer_id, reviewed_id, rating, body
-       ) VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(
+  const isRequester = reservation.requester_id === session.user.id;
+  const isOwner = reservation.owner_id === session.user.id;
+
+  if (!isRequester && !isOwner) {
+    throw new Error("Nie możesz ocenić tej rezerwacji.");
+  }
+
+  const reviewedId = isRequester
+    ? reservation.owner_id
+    : reservation.requester_id;
+  const insertResult = await env.DB.prepare(
+    `INSERT INTO reviews (
+       reservation_id, listing_id, reviewer_id, reviewed_id, rating, body
+     )
+     SELECT ?, ?, ?, ?, ?, ?
+     WHERE NOT EXISTS (
+       SELECT 1
+       FROM reviews
+       WHERE reservation_id = ? AND reviewer_id = ?
+     )`,
+  )
+    .bind(
       reservationId,
       reservation.listing_id,
       session.user.id,
-      reservation.owner_id,
+      reviewedId,
       rating,
       body,
-    ),
-    createNotificationStatement(env.DB, {
-      userId: reservation.owner_id,
-      type: "review_received",
-      title: "Nowa opinia",
-      body: `${session.user.name} wystawił(a) Ci ocenę ${rating}/5.`,
-      href: `/u/${reservation.owner_id}`,
-    }),
-  ]);
+      reservationId,
+      session.user.id,
+    )
+    .run();
+
+  if (insertResult.meta.changes !== 1) {
+    throw new Error(
+      "Opinia dla tej rezerwacji została już przez Ciebie wystawiona.",
+    );
+  }
+
+  await createNotificationStatement(env.DB, {
+    userId: reviewedId,
+    type: "review_received",
+    title: "Nowa opinia",
+    body: `${session.user.name} wystawił(a) Ci ocenę ${rating}/5.`,
+    href: `/u/${reviewedId}`,
+  }).run();
 
   revalidatePath("/profil");
-  revalidatePath(`/u/${reservation.owner_id}`);
+  revalidatePath(`/u/${reviewedId}`);
   revalidatePath(`/ogloszenie/${reservation.listing_id}`);
   redirect("/profil?oceniono=1#rezerwacje");
 }
