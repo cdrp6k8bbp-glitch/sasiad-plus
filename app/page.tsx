@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import { auth } from "@/lib/auth";
+import { CATEGORIES, isCategoryKey } from "@/lib/categories";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
 
 const categories = [
@@ -48,6 +49,12 @@ const categories = [
     description: "Odkurzacze, osuszacze i wyposażenie",
     href: "/sprzet",
   },
+  {
+    icon: "🧘",
+    title: "Rozwój osobisty",
+    description: "Medytacja, mentoring i spotkania rozwojowe",
+    href: "/rozwoj-osobisty",
+  },
 ];
 
 export default async function Home({
@@ -74,11 +81,15 @@ export default async function Home({
 
   const listings = allListings
     .filter((listing) => {
+      const categoryLabel = isCategoryKey(listing.category)
+        ? CATEGORIES[listing.category].label
+        : listing.category;
       const matchesQuery =
         !q ||
         listing.title.toLowerCase().includes(q) ||
         listing.description.toLowerCase().includes(q) ||
-        listing.category.toLowerCase().includes(q);
+        listing.category.toLowerCase().includes(q) ||
+        categoryLabel.toLowerCase().includes(q);
 
       const matchesLocation =
         !location || listing.location.toLowerCase().includes(location);
@@ -107,6 +118,13 @@ export default async function Home({
 
             <Link className="transition hover:text-green-700" href="/uslugi">
               Pomoc sąsiedzka
+            </Link>
+
+            <Link
+              className="transition hover:text-green-700"
+              href="/rozwoj-osobisty"
+            >
+              Rozwój osobisty
             </Link>
 
             <Link
@@ -250,7 +268,7 @@ export default async function Home({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {categories.map((category) => (
             <Link
               key={category.title}
@@ -388,6 +406,7 @@ export default async function Home({
           <div className="flex gap-5">
             <Link href="/sprzet">Sprzęt</Link>
             <Link href="/uslugi">Pomoc</Link>
+            <Link href="/rozwoj-osobisty">Rozwój osobisty</Link>
             <Link
   href="/profil"
   className="transition hover:text-green-700"
@@ -399,7 +418,7 @@ export default async function Home({
         </div>
       </footer>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
         <Link href="/" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-green-700">
           <span className="text-xl">🏠</span>
           Start
@@ -418,6 +437,11 @@ export default async function Home({
         <Link href="/uslugi" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-slate-600">
           <span className="text-xl">🤝</span>
           Pomoc
+        </Link>
+
+        <Link href="/rozwoj-osobisty" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-slate-600">
+          <span className="text-xl">🧘</span>
+          Rozwój
         </Link>
       </nav>
     </main>

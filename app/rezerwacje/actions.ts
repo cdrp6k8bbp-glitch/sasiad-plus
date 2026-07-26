@@ -64,6 +64,7 @@ function revalidateReservationPages(listingId: number) {
   revalidatePath("/");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
+  revalidatePath("/rozwoj-osobisty");
   revalidatePath("/profil");
   revalidatePath(`/ogloszenie/${listingId}`);
 }

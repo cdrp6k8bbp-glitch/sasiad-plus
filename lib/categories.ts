@@ -81,6 +81,24 @@ export const CATEGORIES = {
       "Inne wyposażenie",
     ],
   },
+  rozwoj: {
+    label: "Rozwój osobisty",
+    icon: "🧘",
+    subcategories: [
+      "Sesja oddechowa",
+      "Kundalini",
+      "Ustawienia Hellingera",
+      "Reiki",
+      "Koncert mis tybetańskich",
+      "Mentoring",
+      "Medytacja prowadzona",
+      "Warsztaty uważności",
+      "Tantra",
+      "Spotkania rozwojowe",
+      "Wspólne wyjazdy rozwojowe",
+      "Inne",
+    ],
+  },
 } as const;
 
 export type CategoryKey = keyof typeof CATEGORIES;

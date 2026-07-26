@@ -23,7 +23,7 @@ export default async function Dodaj() {
         </h1>
 
         <p className="mt-4 text-slate-600">
-          Podziel się sprzętem lub zaoferuj pomoc sąsiadom jako{" "}
+          Podziel się sprzętem, zaoferuj pomoc albo zaproś na spotkanie jako{" "}
           <strong>{session.user.name}</strong>.
         </p>
 

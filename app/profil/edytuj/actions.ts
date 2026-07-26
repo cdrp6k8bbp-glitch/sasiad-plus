@@ -55,6 +55,7 @@ export async function updateProfile(formData: FormData): Promise<void> {
   revalidatePath("/profil");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
+  revalidatePath("/rozwoj-osobisty");
   revalidatePath(`/u/${session.user.id}`);
   redirect("/profil?zapisano=1");
 }

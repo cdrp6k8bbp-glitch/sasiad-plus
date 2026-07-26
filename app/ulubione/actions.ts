@@ -52,6 +52,7 @@ export async function setFavorite(
   revalidatePath("/");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
+  revalidatePath("/rozwoj-osobisty");
   revalidatePath("/profil");
   revalidatePath(`/ogloszenie/${listingId}`);
 

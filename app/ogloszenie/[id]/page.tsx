@@ -30,6 +30,7 @@ const categoryNames: Record<string, string> = {
   turystyka: "Turystyka",
   ogrod: "Ogród",
   dom: "Dom",
+  rozwoj: "Rozwój osobisty",
 };
 
 export default async function ListingPage({

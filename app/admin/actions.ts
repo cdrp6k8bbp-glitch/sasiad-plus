@@ -71,6 +71,7 @@ export async function moderateReport(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
+  revalidatePath("/rozwoj-osobisty");
   revalidatePath(`/ogloszenie/${report.listing_id}`);
   redirect(`/admin?status=${filter}&zapisano=1`);
 }

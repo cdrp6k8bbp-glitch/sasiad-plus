@@ -9,7 +9,7 @@ type CategoryListingsPageProps = {
   categories: string | string[];
   description: string;
   icon: string;
-  pathname: "/sprzet" | "/uslugi";
+  pathname: "/rozwoj-osobisty" | "/sprzet" | "/uslugi";
   searchParams: Promise<{
     q?: string | string[];
     location?: string | string[];
@@ -86,6 +86,15 @@ export default async function CategoryListingsPage({
               href="/uslugi"
             >
               Pomoc sąsiedzka
+            </Link>
+
+            <Link
+              className={`transition hover:text-green-700 ${
+                pathname === "/rozwoj-osobisty" ? "text-green-700" : ""
+              }`}
+              href="/rozwoj-osobisty"
+            >
+              Rozwój osobisty
             </Link>
 
             <Link
@@ -229,7 +238,7 @@ export default async function CategoryListingsPage({
         )}
       </section>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
         <Link href="/" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-slate-600">
           <span className="text-xl">🏠</span>
           Start
@@ -255,6 +264,15 @@ export default async function CategoryListingsPage({
         >
           <span className="text-xl">🤝</span>
           Pomoc
+        </Link>
+        <Link
+          href="/rozwoj-osobisty"
+          className={`flex flex-col items-center gap-1 p-2 text-xs font-medium ${
+            pathname === "/rozwoj-osobisty" ? "text-green-700" : "text-slate-600"
+          }`}
+        >
+          <span className="text-xl">🧘</span>
+          Rozwój
         </Link>
       </nav>
     </main>

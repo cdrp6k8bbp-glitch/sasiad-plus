@@ -144,6 +144,7 @@ export async function addListing(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
+  revalidatePath("/rozwoj-osobisty");
   revalidatePath("/profil");
 
   redirect("/?dodano=1");
