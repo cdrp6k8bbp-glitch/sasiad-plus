@@ -64,6 +64,18 @@ export async function deleteUserApplicationData(
 
   await env.DB.batch([
     env.DB.prepare(
+      `DELETE FROM content_reports
+       WHERE reporter_id = ? OR reported_user_id = ?`,
+    ).bind(userId, userId),
+    env.DB.prepare(
+      `DELETE FROM user_blocks
+       WHERE blocker_id = ? OR blocked_id = ?`,
+    ).bind(userId, userId),
+    env.DB.prepare(
+      `DELETE FROM action_rate_limits
+       WHERE user_id = ?`,
+    ).bind(userId),
+    env.DB.prepare(
       `DELETE FROM messages
        WHERE conversation_id IN (${userConversations})`,
     ).bind(userId, userId),

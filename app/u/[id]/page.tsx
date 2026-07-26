@@ -6,6 +6,8 @@ import ListingCard from "@/components/ListingCard";
 import TrustBadge from "@/components/profile/TrustBadge";
 import TrustPanel from "@/components/profile/TrustPanel";
 import UserStats from "@/components/profile/UserStats";
+import BlockUserButton from "@/components/safety/BlockUserButton";
+import ReportForm from "@/components/safety/ReportForm";
 import { auth } from "@/lib/auth";
 import {
   getFavoriteListingIds,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/reviews";
 import { getUserProfileDetails } from "@/lib/profiles";
 import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
+import { getUserBlockState } from "@/lib/user-blocks";
 
 function initials(name: string): string {
   return name
@@ -37,10 +40,16 @@ function formatDate(value: string | number): string {
 
 export default async function PublicProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    zgloszono?: string;
+    blokada?: string;
+  }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
   const [
     user,
     reviews,
@@ -63,10 +72,16 @@ export default async function PublicProfilePage({
     notFound();
   }
 
+  const isOwnProfile = session?.user.id === id;
+  const blockState =
+    session && !isOwnProfile
+      ? await getUserBlockState(session.user.id, id)
+      : null;
   const favoriteIds = new Set(
     session ? await getFavoriteListingIds(session.user.id) : [],
   );
   const trustLevel = getTrustLevel(trustStats);
+  const hideUserContent = Boolean(blockState?.blockedByViewer);
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-16 text-slate-900">
@@ -83,6 +98,26 @@ export default async function PublicProfilePage({
         <Link href="/" className="font-semibold text-green-700 hover:underline">
           ← Wróć do ogłoszeń
         </Link>
+
+        {query.zgloszono && (
+          <p className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-bold text-green-800">
+            {query.zgloszono === "istnieje"
+              ? "Ta treść została już przez Ciebie zgłoszona."
+              : "✓ Zgłoszenie zostało przekazane do moderacji."}
+          </p>
+        )}
+
+        {query.blokada === "1" && (
+          <p className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-bold text-green-800">
+            ✓ Użytkownik został zablokowany. Nie możecie do siebie pisać.
+          </p>
+        )}
+
+        {query.blokada === "usunieta" && (
+          <p className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-bold text-green-800">
+            ✓ Użytkownik został odblokowany.
+          </p>
+        )}
 
         <section className="flex flex-col gap-6 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center md:p-8">
           <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-600 to-emerald-400 text-3xl font-black text-white">
@@ -110,9 +145,51 @@ export default async function PublicProfilePage({
                 {profileDetails.bio}
               </p>
             )}
+            {!isOwnProfile && (
+              <div className="mt-6 flex flex-col items-start gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-start">
+                {session ? (
+                  <>
+                    <BlockUserButton
+                      userId={id}
+                      userName={user.name}
+                      isBlocked={Boolean(blockState?.blockedByViewer)}
+                    />
+                    <div className="w-full max-w-sm">
+                      <ReportForm
+                        targetType="profile"
+                        targetId={id}
+                        label="Zgłoś profil"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <Link
+                    href={`/logowanie?redirect=/u/${encodeURIComponent(id)}`}
+                    className="text-sm font-bold text-slate-500 hover:text-red-700 hover:underline"
+                  >
+                    Zaloguj się, aby zgłosić lub zablokować użytkownika
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
+        {blockState?.viewerBlockedByUser && !blockState.blockedByViewer && (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 font-bold text-amber-900">
+            Kontakt z tym użytkownikiem jest obecnie niedostępny.
+          </p>
+        )}
+
+        {hideUserContent && (
+          <p className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-600">
+            Treści zablokowanego użytkownika są ukryte. Odblokuj go, aby
+            ponownie je zobaczyć.
+          </p>
+        )}
+
+        {!hideUserContent && (
+          <>
         <UserStats
           activeListings={trustStats.activeListings}
           completedTotal={trustStats.completedTotal}
@@ -145,6 +222,16 @@ export default async function PublicProfilePage({
                   >
                     {review.listing_title}
                   </Link>
+                  {session && review.reviewer_id !== session.user.id && (
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <ReportForm
+                        targetType="review"
+                        targetId={review.id}
+                        label="Zgłoś opinię"
+                        compact
+                      />
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
@@ -176,6 +263,8 @@ export default async function PublicProfilePage({
             </div>
           )}
         </section>
+          </>
+        )}
       </div>
     </main>
   );

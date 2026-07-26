@@ -14,8 +14,13 @@ function formatDate(value: string): string {
   }).format(new Date(`${value.replace(" ", "T")}Z`));
 }
 
-export default async function WiadomosciPage() {
+export default async function WiadomosciPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ zablokowano?: string }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
+  const params = await searchParams;
 
   if (!session) {
     redirect("/logowanie?redirect=/wiadomosci");
@@ -37,6 +42,12 @@ export default async function WiadomosciPage() {
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
         <p className="font-semibold text-green-700">Twoje kontakty</p>
         <h1 className="mt-1 text-4xl font-black tracking-tight">Wiadomości</h1>
+
+        {params.zablokowano === "1" && (
+          <p className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-bold text-green-800">
+            ✓ Użytkownik został zablokowany. Ta rozmowa została ukryta.
+          </p>
+        )}
 
         {conversations.length === 0 ? (
           <div className="mt-8 rounded-[32px] border border-dashed border-slate-300 bg-white p-10 text-center">

@@ -4,10 +4,12 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { enforceRateLimits, RATE_LIMITS } from "@/lib/anti-spam";
 import { auth } from "@/lib/auth";
 import { sendReservationUpdateEmail } from "@/lib/email";
 import { createNotificationStatement } from "@/lib/notifications";
 import { sendPushNotification, type PushEnv } from "@/lib/push";
+import { areUsersBlocked } from "@/lib/user-blocks";
 
 type ReservationNotificationEnv = PushEnv & {
   BETTER_AUTH_URL: string;
@@ -180,6 +182,14 @@ export async function createReservation(formData: FormData): Promise<void> {
   if (listing.owner_id === session.user.id) {
     throw new Error("Nie można rezerwować własnego ogłoszenia.");
   }
+
+  if (await areUsersBlocked(env.DB, session.user.id, listing.owner_id)) {
+    throw new Error(
+      "Nie możesz zarezerwować tej oferty, ponieważ jedno z Was zablokowało kontakt.",
+    );
+  }
+
+  await enforceRateLimits(env.DB, session.user.id, RATE_LIMITS.reservation);
 
   const insertResult = await env.DB.prepare(
     `INSERT INTO reservations (

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import AuthNav from "@/components/AuthNav";
+import BlockUserButton from "@/components/safety/BlockUserButton";
+import ReportForm from "@/components/safety/ReportForm";
 import { auth } from "@/lib/auth";
 import {
   getConversationForUser,
@@ -21,11 +23,14 @@ function formatDate(value: string): string {
 
 export default async function ConversationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ zgloszono?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   const { id } = await params;
+  const query = await searchParams;
   const conversationId = Number(id);
 
   if (!session) {
@@ -51,6 +56,10 @@ export default async function ConversationPage({
     conversation.buyer_id === session.user.id
       ? conversation.seller_name
       : conversation.buyer_name;
+  const otherUserId =
+    conversation.buyer_id === session.user.id
+      ? conversation.seller_id
+      : conversation.buyer_id;
   const sendMessageForConversation = sendMessage.bind(null, conversation.id);
 
   return (
@@ -77,14 +86,40 @@ export default async function ConversationPage({
             <p className="text-sm font-semibold text-green-700">
               {conversation.listing_title}
             </p>
-            <h1 className="mt-1 text-2xl font-black">{otherUserName}</h1>
-            <Link
-              href={`/ogloszenie/${conversation.listing_id}`}
-              className="mt-2 inline-flex text-sm font-semibold text-slate-500 hover:text-green-700"
-            >
-              Zobacz ogłoszenie →
-            </Link>
+            <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-black">{otherUserName}</h1>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                  <Link
+                    href={`/ogloszenie/${conversation.listing_id}`}
+                    className="text-sm font-semibold text-slate-500 hover:text-green-700"
+                  >
+                    Zobacz ogłoszenie →
+                  </Link>
+                  <Link
+                    href={`/u/${otherUserId}`}
+                    className="text-sm font-semibold text-slate-500 hover:text-green-700"
+                  >
+                    Zobacz profil →
+                  </Link>
+                </div>
+              </div>
+              <BlockUserButton
+                userId={otherUserId}
+                userName={otherUserName}
+                isBlocked={false}
+                returnTo="/wiadomosci"
+              />
+            </div>
           </div>
+
+          {query.zgloszono && (
+            <p className="border-b border-green-200 bg-green-50 px-5 py-4 text-sm font-bold text-green-800">
+              {query.zgloszono === "istnieje"
+                ? "Ta wiadomość została już przez Ciebie zgłoszona."
+                : "✓ Zgłoszenie zostało przekazane do moderacji."}
+            </p>
+          )}
 
           <div className="min-h-[360px] space-y-4 bg-slate-50 p-4 md:p-6">
             {messages.length === 0 ? (
@@ -120,6 +155,16 @@ export default async function ConversationPage({
                       >
                         {formatDate(message.created_at)}
                       </p>
+                      {!isMine && (
+                        <div className="mt-3 border-t border-slate-100 pt-3">
+                          <ReportForm
+                            targetType="message"
+                            targetId={message.id}
+                            label="Zgłoś wiadomość"
+                            compact
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

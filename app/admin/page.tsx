@@ -1,6 +1,8 @@
 import Link from "next/link";
+import ContentModerationActions from "@/components/admin/ContentModerationActions";
 import ModerationActions from "@/components/admin/ModerationActions";
 import { requireAdmin } from "@/lib/admin";
+import { getContentReports } from "@/lib/content-reports";
 import {
   getListingReports,
   type ListingReportStatus,
@@ -25,13 +27,30 @@ const statusLabels: Record<ListingReportStatus, string> = {
 const reasonLabels: Record<string, string> = {
   spam: "Spam lub duplikat",
   fraud: "Podejrzenie oszustwa",
+  harassment: "Nękanie lub obrażanie",
   prohibited: "Niedozwolona oferta",
   misleading: "Treść wprowadza w błąd",
+  hate: "Mowa nienawiści",
+  privacy: "Naruszenie prywatności",
   other: "Inny problem",
+};
+
+const targetLabels: Record<string, string> = {
+  profile: "Profil użytkownika",
+  message: "Wiadomość prywatna",
+  review: "Opinia",
 };
 
 function isReportFilter(value: string): value is ReportFilter {
   return FILTERS.includes(value as ReportFilter);
+}
+
+function formatReportDate(value: string): string {
+  return new Intl.DateTimeFormat("pl-PL", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Warsaw",
+  }).format(new Date(`${value}Z`));
 }
 
 export default async function AdminPage({
@@ -43,11 +62,19 @@ export default async function AdminPage({
   const params = await searchParams;
   const currentFilter =
     params.status && isReportFilter(params.status) ? params.status : "pending";
-  const allReports = await getListingReports();
-  const reports =
+  const [allListingReports, allContentReports] = await Promise.all([
+    getListingReports(),
+    getContentReports(),
+  ]);
+  const listingReports =
     currentFilter === "all"
-      ? allReports
-      : allReports.filter((report) => report.status === currentFilter);
+      ? allListingReports
+      : allListingReports.filter((report) => report.status === currentFilter);
+  const contentReports =
+    currentFilter === "all"
+      ? allContentReports
+      : allContentReports.filter((report) => report.status === currentFilter);
+  const allReports = [...allListingReports, ...allContentReports];
   const counts = {
     pending: allReports.filter((report) => report.status === "pending").length,
     reviewed: allReports.filter((report) => report.status === "reviewed").length,
@@ -75,7 +102,7 @@ export default async function AdminPage({
         </h1>
         <p className="mt-3 max-w-2xl text-slate-600">
           Przeglądaj zgłoszenia użytkowników i podejmuj działania wobec
-          niebezpiecznych lub niezgodnych ogłoszeń.
+          niebezpiecznych ogłoszeń, profili, wiadomości i opinii.
         </p>
 
         {params.zapisano === "1" && (
@@ -100,7 +127,7 @@ export default async function AdminPage({
           ))}
         </nav>
 
-        {reports.length === 0 ? (
+        {listingReports.length === 0 && contentReports.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
             <div className="text-5xl">🛡️</div>
             <h2 className="mt-4 text-2xl font-black">Brak zgłoszeń w tej sekcji</h2>
@@ -110,9 +137,9 @@ export default async function AdminPage({
           </div>
         ) : (
           <div className="mt-8 space-y-5">
-            {reports.map((report) => (
+            {listingReports.map((report) => (
               <article
-                key={report.id}
+                key={`listing-${report.id}`}
                 className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -120,6 +147,9 @@ export default async function AdminPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-800">
                         {reasonLabels[report.reason] ?? report.reason}
+                      </span>
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
+                        Ogłoszenie
                       </span>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                         {statusLabels[report.status]}
@@ -158,11 +188,7 @@ export default async function AdminPage({
                       Data zgłoszenia
                     </p>
                     <p className="mt-1 font-bold">
-                      {new Intl.DateTimeFormat("pl-PL", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                        timeZone: "Europe/Warsaw",
-                      }).format(new Date(`${report.created_at}Z`))}
+                      {formatReportDate(report.created_at)}
                     </p>
                   </div>
                 </div>
@@ -179,6 +205,88 @@ export default async function AdminPage({
                     reportId={report.id}
                     currentFilter={currentFilter}
                     listingArchived={Boolean(report.listing_archived_at)}
+                  />
+                </div>
+              </article>
+            ))}
+
+            {contentReports.map((report) => (
+              <article
+                key={`content-${report.id}`}
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-800">
+                        {reasonLabels[report.reason] ?? report.reason}
+                      </span>
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
+                        {targetLabels[report.target_type]}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                        {statusLabels[report.status]}
+                      </span>
+                    </div>
+                    <h2 className="mt-4 text-2xl font-black">
+                      Zgłoszono: {report.reported_user_name}
+                    </h2>
+                    <p className="mt-1 text-slate-500">
+                      {report.reported_user_email}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/u/${report.reported_user_id}`}
+                    className="font-bold text-green-700 hover:underline"
+                  >
+                    Otwórz profil →
+                  </Link>
+                </div>
+
+                <div className="mt-6 grid gap-4 rounded-2xl bg-slate-50 p-5 md:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Osoba zgłaszająca
+                    </p>
+                    <p className="mt-1 font-bold">{report.reporter_name}</p>
+                    <p className="text-sm text-slate-600">
+                      {report.reporter_email}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Data zgłoszenia
+                    </p>
+                    <p className="mt-1 font-bold">
+                      {formatReportDate(report.created_at)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-5 md:grid-cols-2">
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">
+                      Zgłoszona treść
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 leading-7 text-slate-600">
+                      {report.content_snapshot ||
+                        "Brak podglądu zgłoszonej treści."}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">
+                      Opis problemu
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 leading-7 text-slate-600">
+                      {report.details || "Nie dodano dodatkowego opisu."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t border-slate-200 pt-6">
+                  <ContentModerationActions
+                    reportId={report.id}
+                    currentFilter={currentFilter}
                   />
                 </div>
               </article>

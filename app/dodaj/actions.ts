@@ -4,6 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { enforceRateLimits, RATE_LIMITS } from "@/lib/anti-spam";
 import { auth } from "@/lib/auth";
 import {
   CATEGORIES,
@@ -102,6 +103,8 @@ export async function addListing(formData: FormData): Promise<void> {
   }
 
   try {
+    await enforceRateLimits(env.DB, session.user.id, RATE_LIMITS.listing);
+
     await env.DB.prepare(
       `INSERT INTO listings (
         title,

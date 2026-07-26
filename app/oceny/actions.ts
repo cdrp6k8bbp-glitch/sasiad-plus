@@ -4,8 +4,10 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { enforceRateLimits, RATE_LIMITS } from "@/lib/anti-spam";
 import { auth } from "@/lib/auth";
 import { createNotificationStatement } from "@/lib/notifications";
+import { areUsersBlocked } from "@/lib/user-blocks";
 
 function positiveInteger(value: FormDataEntryValue | null): number | null {
   if (typeof value !== "string") return null;
@@ -66,6 +68,30 @@ export async function createReview(formData: FormData): Promise<void> {
   const reviewedId = isRequester
     ? reservation.owner_id
     : reservation.requester_id;
+
+  if (await areUsersBlocked(env.DB, session.user.id, reviewedId)) {
+    throw new Error(
+      "Nie możesz wystawić opinii, ponieważ jedno z Was zablokowało kontakt.",
+    );
+  }
+
+  const existingReview = await env.DB.prepare(
+    `SELECT id
+     FROM reviews
+     WHERE reservation_id = ? AND reviewer_id = ?
+     LIMIT 1`,
+  )
+    .bind(reservationId, session.user.id)
+    .first<{ id: number }>();
+
+  if (existingReview) {
+    throw new Error(
+      "Opinia dla tej rezerwacji została już przez Ciebie wystawiona.",
+    );
+  }
+
+  await enforceRateLimits(env.DB, session.user.id, RATE_LIMITS.review);
+
   const insertResult = await env.DB.prepare(
     `INSERT INTO reviews (
        reservation_id, listing_id, reviewer_id, reviewed_id, rating, body

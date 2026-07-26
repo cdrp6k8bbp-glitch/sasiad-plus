@@ -20,6 +20,7 @@ import {
 } from "@/lib/reservations";
 import { getReviewSummary } from "@/lib/reviews";
 import { reportListing } from "@/app/zgloszenia/actions";
+import { getUserBlockState } from "@/lib/user-blocks";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -81,6 +82,13 @@ export default async function ListingPage({
   const ownerReviewSummary = listing.owner_id
     ? await getReviewSummary(listing.owner_id)
     : null;
+  const blockState =
+    session && listing.owner_id && !isOwner
+      ? await getUserBlockState(session.user.id, listing.owner_id)
+      : null;
+  const contactBlocked = Boolean(
+    blockState?.blockedByViewer || blockState?.viewerBlockedByUser,
+  );
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
@@ -217,6 +225,10 @@ export default async function ListingPage({
                 <p className="mt-6 rounded-2xl bg-slate-100 p-4 text-center text-sm font-semibold text-slate-600">
                   Kontakt dla tego ogłoszenia jest obecnie wyłączony.
                 </p>
+              ) : contactBlocked ? (
+                <p className="mt-6 rounded-2xl bg-amber-50 p-4 text-center text-sm font-semibold text-amber-900">
+                  Kontakt z tym użytkownikiem jest obecnie niedostępny.
+                </p>
               ) : !session ? (
                 <Link
                   href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
@@ -236,7 +248,7 @@ export default async function ListingPage({
                 </form>
               )}
 
-              {!isOwner && !isArchived && (
+              {!isOwner && !isArchived && !contactBlocked && (
                 <FavoriteButton
                   listingId={listing.id}
                   initialIsFavorite={isFavorite}
@@ -244,7 +256,10 @@ export default async function ListingPage({
                 />
               )}
 
-              {listing.owner_id && !isOwner && !isArchived && (
+              {listing.owner_id &&
+                !isOwner &&
+                !isArchived &&
+                !contactBlocked && (
                 <div className="mt-6 border-t border-slate-200 pt-6">
                   <h2 className="text-xl font-black">Zarezerwuj termin</h2>
 

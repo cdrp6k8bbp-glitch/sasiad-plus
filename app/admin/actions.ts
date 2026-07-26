@@ -75,3 +75,38 @@ export async function moderateReport(formData: FormData): Promise<void> {
   revalidatePath(`/ogloszenie/${report.listing_id}`);
   redirect(`/admin?status=${filter}&zapisano=1`);
 }
+
+export async function moderateContentReport(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+
+  const reportId = positiveInteger(formData.get("report_id"));
+  const actionValue = formData.get("moderation_action");
+  const action = typeof actionValue === "string" ? actionValue : "";
+  const filterValue = formData.get("filter");
+  const filter =
+    typeof filterValue === "string" && FILTERS.has(filterValue)
+      ? filterValue
+      : "pending";
+
+  if (!reportId || (action !== "review" && action !== "dismiss")) {
+    throw new Error("Nieprawidłowe działanie moderacyjne.");
+  }
+
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `UPDATE content_reports
+     SET status = ?, updated_at = datetime('now')
+     WHERE id = ?`,
+  )
+    .bind(action === "review" ? "reviewed" : "dismissed", reportId)
+    .run();
+
+  if (result.meta.changes !== 1) {
+    throw new Error("Zgłoszenie już nie istnieje.");
+  }
+
+  revalidatePath("/admin");
+  redirect(`/admin?status=${filter}&zapisano=1`);
+}

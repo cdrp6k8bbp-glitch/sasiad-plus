@@ -1,5 +1,10 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
+import {
+  enforceRateLimits,
+  RATE_LIMITS,
+  RateLimitError,
+} from "@/lib/anti-spam";
 import { auth } from "@/lib/auth";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -54,6 +59,11 @@ export async function POST(request: Request) {
     }
 
     const { env } = await getCloudflareContext({ async: true });
+    await enforceRateLimits(
+      env.DB,
+      session.user.id,
+      RATE_LIMITS.imageUpload,
+    );
 
     const extension = getExtension(image.type);
     const imageKey = `listings/${crypto.randomUUID()}.${extension}`;
@@ -74,6 +84,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Błąd wysyłania zdjęcia:", error);
+
+    if (error instanceof RateLimitError) {
+      return NextResponse.json({ error: error.message }, { status: 429 });
+    }
 
     return NextResponse.json(
       { error: "Nie udało się wysłać zdjęcia." },

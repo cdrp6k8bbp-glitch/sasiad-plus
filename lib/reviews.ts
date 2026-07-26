@@ -10,6 +10,7 @@ export type Review = {
   id: number;
   listing_id: number;
   listing_title: string;
+  reviewer_id: string;
   reviewer_name: string;
   rating: number;
   body: string;
@@ -42,6 +43,7 @@ export async function getReviewsForUser(userId: string): Promise<Review[]> {
        reviews.id,
        reviews.listing_id,
        listings.title AS listing_title,
+       reviews.reviewer_id,
        reviewer.name AS reviewer_name,
        reviews.rating,
        reviews.body,

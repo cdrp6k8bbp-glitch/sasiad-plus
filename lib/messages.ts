@@ -62,7 +62,17 @@ export async function getConversationsForUser(
      JOIN listings ON listings.id = conversations.listing_id
      JOIN "user" AS buyer ON buyer.id = conversations.buyer_id
      JOIN "user" AS seller ON seller.id = conversations.seller_id
-     WHERE conversations.buyer_id = ? OR conversations.seller_id = ?
+     WHERE (conversations.buyer_id = ? OR conversations.seller_id = ?)
+       AND NOT EXISTS (
+         SELECT 1
+         FROM user_blocks
+         WHERE
+           (user_blocks.blocker_id = conversations.buyer_id
+             AND user_blocks.blocked_id = conversations.seller_id)
+           OR
+           (user_blocks.blocker_id = conversations.seller_id
+             AND user_blocks.blocked_id = conversations.buyer_id)
+       )
      ORDER BY conversations.updated_at DESC, conversations.id DESC`,
   )
     .bind(userId, userId, userId, userId)
@@ -79,7 +89,17 @@ export async function getUnreadMessageCount(userId: string): Promise<number> {
      JOIN conversations ON conversations.id = messages.conversation_id
      WHERE messages.sender_id != ?
        AND messages.read_at IS NULL
-       AND (conversations.buyer_id = ? OR conversations.seller_id = ?)`,
+       AND (conversations.buyer_id = ? OR conversations.seller_id = ?)
+       AND NOT EXISTS (
+         SELECT 1
+         FROM user_blocks
+         WHERE
+           (user_blocks.blocker_id = conversations.buyer_id
+             AND user_blocks.blocked_id = conversations.seller_id)
+           OR
+           (user_blocks.blocker_id = conversations.seller_id
+             AND user_blocks.blocked_id = conversations.buyer_id)
+       )`,
   )
     .bind(userId, userId, userId)
     .first<{ unread_count: number }>();
@@ -132,6 +152,16 @@ export async function getConversationForUser(
      JOIN "user" AS seller ON seller.id = conversations.seller_id
      WHERE conversations.id = ?
        AND (conversations.buyer_id = ? OR conversations.seller_id = ?)
+       AND NOT EXISTS (
+         SELECT 1
+         FROM user_blocks
+         WHERE
+           (user_blocks.blocker_id = conversations.buyer_id
+             AND user_blocks.blocked_id = conversations.seller_id)
+           OR
+           (user_blocks.blocker_id = conversations.seller_id
+             AND user_blocks.blocked_id = conversations.buyer_id)
+       )
      LIMIT 1`,
   )
     .bind(conversationId, userId, userId)
