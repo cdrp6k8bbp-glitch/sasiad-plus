@@ -14,6 +14,7 @@ const icons = {
   reservation_cancelled: "❌",
   reservation_completed: "🤝",
   review_received: "⭐",
+  moderation_update: "🛡️",
 };
 
 function formatDate(value: string): string {

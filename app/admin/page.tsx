@@ -7,6 +7,10 @@ import {
   getListingReports,
   type ListingReportStatus,
 } from "@/lib/listing-reports";
+import {
+  getModerationDecisions,
+  type ModerationDecision,
+} from "@/lib/moderation-decisions";
 
 const FILTERS = ["pending", "reviewed", "dismissed", "all"] as const;
 type ReportFilter = (typeof FILTERS)[number];
@@ -39,6 +43,13 @@ const targetLabels: Record<string, string> = {
   profile: "Profil użytkownika",
   message: "Wiadomość prywatna",
   review: "Opinia",
+  listing: "Ogłoszenie",
+};
+
+const decisionLabels: Record<ModerationDecision["decision"], string> = {
+  reviewed: "Sprawdzone",
+  dismissed: "Odrzucone",
+  archived: "Treść zarchiwizowana",
 };
 
 function isReportFilter(value: string): value is ReportFilter {
@@ -53,6 +64,39 @@ function formatReportDate(value: string): string {
   }).format(new Date(`${value}Z`));
 }
 
+function DecisionDetails({
+  decision,
+}: {
+  decision: ModerationDecision | undefined;
+}) {
+  if (!decision) {
+    return (
+      <p className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+        To starsza decyzja — nie ma jeszcze zapisanego uzasadnienia.
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-black text-slate-800">
+          {decisionLabels[decision.decision]}
+        </p>
+        <p className="text-sm text-slate-500">
+          {formatReportDate(decision.created_at)}
+        </p>
+      </div>
+      <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-600">
+        {decision.justification}
+      </p>
+      <p className="mt-3 text-sm font-semibold text-slate-500">
+        Moderator: {decision.moderator_name ?? "usunięte konto administratora"}
+      </p>
+    </div>
+  );
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -62,10 +106,18 @@ export default async function AdminPage({
   const params = await searchParams;
   const currentFilter =
     params.status && isReportFilter(params.status) ? params.status : "pending";
-  const [allListingReports, allContentReports] = await Promise.all([
+  const [allListingReports, allContentReports, moderationDecisions] =
+    await Promise.all([
     getListingReports(),
     getContentReports(),
+    getModerationDecisions(),
   ]);
+  const decisionsByReport = new Map(
+    moderationDecisions.map((decision) => [
+      `${decision.report_kind}:${decision.report_id}`,
+      decision,
+    ]),
+  );
   const listingReports =
     currentFilter === "all"
       ? allListingReports
@@ -201,11 +253,17 @@ export default async function AdminPage({
                 </div>
 
                 <div className="mt-6 border-t border-slate-200 pt-6">
-                  <ModerationActions
-                    reportId={report.id}
-                    currentFilter={currentFilter}
-                    listingArchived={Boolean(report.listing_archived_at)}
-                  />
+                  {report.status === "pending" ? (
+                    <ModerationActions
+                      reportId={report.id}
+                      currentFilter={currentFilter}
+                      listingArchived={Boolean(report.listing_archived_at)}
+                    />
+                  ) : (
+                    <DecisionDetails
+                      decision={decisionsByReport.get(`listing:${report.id}`)}
+                    />
+                  )}
                 </div>
               </article>
             ))}
@@ -284,15 +342,77 @@ export default async function AdminPage({
                 </div>
 
                 <div className="mt-6 border-t border-slate-200 pt-6">
-                  <ContentModerationActions
-                    reportId={report.id}
-                    currentFilter={currentFilter}
-                  />
+                  {report.status === "pending" ? (
+                    <ContentModerationActions
+                      reportId={report.id}
+                      currentFilter={currentFilter}
+                    />
+                  ) : (
+                    <DecisionDetails
+                      decision={decisionsByReport.get(`content:${report.id}`)}
+                    />
+                  )}
                 </div>
               </article>
             ))}
           </div>
         )}
+
+        <section className="mt-12" aria-labelledby="moderation-history">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-semibold text-green-700">Ślad decyzji</p>
+              <h2
+                id="moderation-history"
+                className="mt-1 text-3xl font-black tracking-tight"
+              >
+                Historia moderacji
+              </h2>
+            </div>
+            <p className="text-sm font-semibold text-slate-500">
+              {moderationDecisions.length} zapisanych decyzji
+            </p>
+          </div>
+
+          {moderationDecisions.length === 0 ? (
+            <p className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-slate-600">
+              Historia pojawi się po zapisaniu pierwszej decyzji z uzasadnieniem.
+            </p>
+          ) : (
+            <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+              {moderationDecisions.slice(0, 50).map((decision) => (
+                <article
+                  key={decision.id}
+                  className="border-b border-slate-100 p-5 last:border-b-0 md:p-6"
+                >
+                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
+                          {targetLabels[decision.target_type]}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                          {decisionLabels[decision.decision]}
+                        </span>
+                      </div>
+                      <p className="mt-3 font-bold text-slate-800">
+                        {decision.justification}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Moderator:{" "}
+                        {decision.moderator_name ??
+                          "usunięte konto administratora"}
+                      </p>
+                    </div>
+                    <time className="text-sm font-semibold text-slate-500">
+                      {formatReportDate(decision.created_at)}
+                    </time>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );

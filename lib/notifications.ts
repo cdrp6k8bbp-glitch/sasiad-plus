@@ -6,7 +6,8 @@ export type NotificationType =
   | "reservation_rejected"
   | "reservation_cancelled"
   | "reservation_completed"
-  | "review_received";
+  | "review_received"
+  | "moderation_update";
 
 export type Notification = {
   id: number;
