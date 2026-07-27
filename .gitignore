@@ -51,5 +51,8 @@ next-env.d.ts
 # local database backups
 /backups/
 
+# signed DPAs and other private compliance evidence
+/docs/ochrona-danych/prywatne/
+
 !.env.example
 auth-cli.db

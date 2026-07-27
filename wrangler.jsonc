@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"main": ".open-next/worker.js",
+	"main": "custom-worker.ts",
 	"name": "sasiad-plus",
 	"compatibility_date": "2026-07-13",
 	"routes": [
@@ -35,6 +35,11 @@
 	"observability": {
 		"enabled": true
 	},
+	"triggers": {
+		"crons": [
+			"17 2 * * *"
+		]
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -53,6 +58,11 @@
 			"name": "sasiad-plus-staging",
 			"workers_dev": true,
 			"routes": [],
+			"triggers": {
+				"crons": [
+					"47 2 * * *"
+				]
+			},
 			"cache": {
 				"enabled": true
 			},
