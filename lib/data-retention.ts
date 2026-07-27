@@ -6,6 +6,9 @@ type RetentionSummary = {
   moderationDecisions: number;
   contentReports: number;
   listingReports: number;
+  emailDeliveryEvents: number;
+  emailDeliveries: number;
+  operationalChecks: number;
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -30,6 +33,9 @@ export async function runDataRetention(
   const moderationCutoffDate = new Date(now);
   moderationCutoffDate.setUTCFullYear(now.getUTCFullYear() - 3);
   const moderationCutoff = moderationCutoffDate.toISOString();
+  const operationalCutoff = new Date(
+    now.getTime() - 90 * DAY_IN_MS,
+  ).toISOString();
 
   try {
     const results = await db.batch([
@@ -77,6 +83,24 @@ export async function runDataRetention(
              AND datetime(updated_at) < datetime(?)`,
         )
         .bind(moderationCutoff),
+      db
+        .prepare(
+          `DELETE FROM email_delivery_events
+           WHERE datetime(occurred_at) < datetime(?)`,
+        )
+        .bind(operationalCutoff),
+      db
+        .prepare(
+          `DELETE FROM email_deliveries
+           WHERE datetime(updated_at) < datetime(?)`,
+        )
+        .bind(operationalCutoff),
+      db
+        .prepare(
+          `DELETE FROM operational_checks
+           WHERE datetime(started_at) < datetime(?)`,
+        )
+        .bind(operationalCutoff),
     ]);
 
     const summary: RetentionSummary = {
@@ -87,6 +111,9 @@ export async function runDataRetention(
       moderationDecisions: deletedRows(results[4]),
       contentReports: deletedRows(results[5]),
       listingReports: deletedRows(results[6]),
+      emailDeliveryEvents: deletedRows(results[7]),
+      emailDeliveries: deletedRows(results[8]),
+      operationalChecks: deletedRows(results[9]),
     };
     const completedAt = new Date().toISOString();
 

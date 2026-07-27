@@ -1,0 +1,78 @@
+name: Operational checks and encrypted backup
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '23 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production health
+        run: |
+          response="$(curl --fail --silent --show-error --retry 2 https://sasiad-plus.com/api/health)"
+          echo "$response" | jq -e '.status == "ok" and .database == "ok"'
+
+  encrypted-backup:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify required secrets
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$BACKUP_ENCRYPTION_PASSWORD"
+
+      - name: Export production D1
+        run: |
+          mkdir -p backup-output
+          npx wrangler d1 export sasiad-plus-db \
+            --remote \
+            --output backup-output/sasiad-plus-db.sql
+
+      - name: Encrypt and verify the export
+        run: |
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 210000 \
+            -in backup-output/sasiad-plus-db.sql \
+            -out backup-output/sasiad-plus-db.sql.enc \
+            -pass env:BACKUP_ENCRYPTION_PASSWORD
+          rm backup-output/sasiad-plus-db.sql
+          sha256sum backup-output/sasiad-plus-db.sql.enc \
+            > backup-output/sasiad-plus-db.sql.enc.sha256
+          sh scripts/d1-restore-rehearsal.sh backup-output/sasiad-plus-db.sql.enc
+
+      - name: Store encrypted backup for 30 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: sasiad-plus-db-${{ github.run_id }}
+          path: backup-output/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary backup files
+        if: always()
+        run: rm -rf backup-output

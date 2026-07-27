@@ -33,11 +33,20 @@
 		"enabled": true
 	},
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	},
+	"vars": {
+		"ALERT_EMAIL": "sasiadpluskontakt@wp.pl"
 	},
 	"triggers": {
 		"crons": [
-			"17 2 * * *"
+			"17 2 * * *",
+			"23 * * * *"
 		]
 	},
 	"d1_databases": [
@@ -60,13 +69,15 @@
 			"routes": [],
 			"triggers": {
 				"crons": [
-					"47 2 * * *"
+					"47 2 * * *",
+					"53 * * * *"
 				]
 			},
 			"cache": {
 				"enabled": true
 			},
 			"vars": {
+				"ALERT_EMAIL": "sasiadpluskontakt@wp.pl",
 				"BETTER_AUTH_URL": "https://sasiad-plus-staging.t4pzthwd6z.workers.dev"
 			},
 			"services": [

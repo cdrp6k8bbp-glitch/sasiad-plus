@@ -93,6 +93,7 @@ function queueReservationUpdates({
   ctx.waitUntil(
     sendReservationUpdateEmail({
       apiKey: env.RESEND_API_KEY,
+      db: env.DB,
       recipient,
       subject,
       heading,

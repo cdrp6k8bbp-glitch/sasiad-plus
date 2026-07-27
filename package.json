@@ -20,6 +20,7 @@
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:backup": "sh scripts/d1-backup.sh",
+    "db:restore:rehearsal": "sh scripts/d1-restore-rehearsal.sh",
     "db:migrations:list": "wrangler d1 migrations list sasiad-plus-db --remote",
     "db:migrations:apply": "wrangler d1 migrations apply sasiad-plus-db --remote",
     "db:migrations:smoke": "sh scripts/d1-migrations-smoke.sh",

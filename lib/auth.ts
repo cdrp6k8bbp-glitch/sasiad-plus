@@ -49,6 +49,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await sendPasswordResetEmail({
         apiKey: authEnv.RESEND_API_KEY,
+        db: authEnv.DB,
         recipient: user.email,
         resetUrl: url,
       });
@@ -61,6 +62,7 @@ export const auth = betterAuth({
       ctx.waitUntil(
         sendEmailVerificationEmail({
           apiKey: authEnv.RESEND_API_KEY,
+          db: authEnv.DB,
           recipient: user.email,
           verificationUrl: url,
         }),

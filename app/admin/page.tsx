@@ -141,9 +141,20 @@ export default async function AdminPage({
           <Link href="/" className="text-2xl font-black text-green-700">
             Sąsiad+
           </Link>
-          <Link href="/profil" className="font-bold text-slate-600 hover:text-green-700">
-            Wróć do profilu
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin/operacje"
+              className="font-bold text-green-700 hover:underline"
+            >
+              Stan techniczny
+            </Link>
+            <Link
+              href="/profil"
+              className="font-bold text-slate-600 hover:text-green-700"
+            >
+              Wróć do profilu
+            </Link>
+          </div>
         </div>
       </header>
 

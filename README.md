@@ -1,6 +1,7 @@
 # Sąsiad+
 
 [![Quality checks](https://github.com/cdrp6k8bbp-glitch/sasiad-plus/actions/workflows/quality.yml/badge.svg)](https://github.com/cdrp6k8bbp-glitch/sasiad-plus/actions/workflows/quality.yml)
+[![Operational checks](https://github.com/cdrp6k8bbp-glitch/sasiad-plus/actions/workflows/operations.yml/badge.svg)](https://github.com/cdrp6k8bbp-glitch/sasiad-plus/actions/workflows/operations.yml)
 
 Sąsiad+ to lokalna platforma wymiany usług i sprzętu między sąsiadami. Użytkownicy mogą publikować ogłoszenia, dodawać zdjęcia, wysyłać wiadomości, rezerwować terminy, zapisywać ulubione oferty i wystawiać oceny po zakończonej rezerwacji.
 
@@ -50,3 +51,6 @@ npm run deploy
 ```
 
 Szczegółowa procedura bezpieczeństwa bazy znajduje się w [docs/database-operations.md](docs/database-operations.md).
+
+Monitoring, alarmy, statusy dostarczenia e-maili i zaszyfrowane kopie są
+opisane w [docs/operacje/README.md](docs/operacje/README.md).
