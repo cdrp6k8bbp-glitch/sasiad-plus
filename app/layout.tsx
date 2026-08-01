@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import SessionInactivityLogout from "@/components/SessionInactivityLogout";
 import SiteFooter from "@/components/SiteFooter";
-import { auth } from "@/lib/auth";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,13 +26,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth.api.getSession({ headers: await headers() });
-
   return (
     <html
       lang="pl"
@@ -42,7 +38,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
-        <SessionInactivityLogout sessionUserId={session?.user.id ?? null} />
+        <SessionInactivityLogout />
         {children}
         <SiteFooter />
       </body>

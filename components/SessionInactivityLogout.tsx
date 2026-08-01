@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { signOut } from "@/lib/auth-client";
+import { signOut, useSession } from "@/lib/auth-client";
 
 const INACTIVITY_LIMIT_MS = 5 * 60 * 1000;
 const ACTIVITY_STORAGE_KEY = "sasiad-plus:last-activity";
 const ACTIVITY_THROTTLE_MS = 1000;
 
-export default function SessionInactivityLogout({
-  sessionUserId,
-}: {
-  sessionUserId: string | null;
-}) {
+export default function SessionInactivityLogout() {
+  const { data: session } = useSession();
+  const sessionUserId = session?.user.id ?? null;
+
   useEffect(() => {
     if (!sessionUserId) return;
 

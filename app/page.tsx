@@ -70,9 +70,10 @@ export default async function Home({
   const params = await searchParams;
   const q = params.q?.trim().toLowerCase() ?? "";
   const location = params.location?.trim().toLowerCase() ?? "";
+  const isSearching = Boolean(q || location);
 
   const [allListings, session] = await Promise.all([
-    getListings(undefined, 100),
+    getListings(undefined, isSearching ? 100 : 6),
     auth.api.getSession({ headers: await headers() }),
   ]);
   const favoriteIds = new Set(
@@ -97,8 +98,6 @@ export default async function Home({
       return matchesQuery && matchesLocation;
     })
     .slice(0, q || location ? 100 : 6);
-
-  const isSearching = Boolean(q || location);
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-24 text-slate-900 md:pb-0">
@@ -398,25 +397,6 @@ export default async function Home({
           </div>
         </div>
       </section>
-
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-10 text-sm text-slate-500 md:flex-row md:items-center md:justify-between md:px-8">
-          <p>© 2026 Sąsiad+. Wszystko, czego potrzebujesz, jest po sąsiedzku.</p>
-
-          <div className="flex gap-5">
-            <Link href="/sprzet">Sprzęt</Link>
-            <Link href="/uslugi">Pomoc</Link>
-            <Link href="/rozwoj-osobisty">Rozwój osobisty</Link>
-            <Link
-  href="/profil"
-  className="transition hover:text-green-700"
->
-  Profil
-</Link>
-            <Link href="/dodaj">Dodaj ogłoszenie</Link>
-          </div>
-        </div>
-      </footer>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
         <Link href="/" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-green-700">
