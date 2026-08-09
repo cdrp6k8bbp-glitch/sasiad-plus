@@ -53,6 +53,12 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
       return;
     }
 
+    const requestController = new AbortController();
+    const requestTimeoutId = window.setTimeout(
+      () => requestController.abort(),
+      15_000,
+    );
+
     try {
       const registrationPayload = {
         name: String(formData.get("name") ?? "").trim(),
@@ -64,6 +70,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
         callbackURL: redirectTo,
         fetchOptions: {
           headers: { "x-turnstile-token": turnstileToken },
+          signal: requestController.signal,
         },
       };
 
@@ -74,6 +81,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
             password,
             fetchOptions: {
               headers: { "x-turnstile-token": turnstileToken },
+              signal: requestController.signal,
             },
           });
 
@@ -116,9 +124,19 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
       }
 
       window.location.assign(redirectTo);
-    } catch {
-      setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+    } catch (caughtError) {
+      if (
+        caughtError instanceof DOMException &&
+        caughtError.name === "AbortError"
+      ) {
+        setError(
+          "Logowanie trwało zbyt długo. Odśwież stronę i spróbuj ponownie za chwilę.",
+        );
+      } else {
+        setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+      }
     } finally {
+      window.clearTimeout(requestTimeoutId);
       resetTurnstile();
       setIsSubmitting(false);
     }

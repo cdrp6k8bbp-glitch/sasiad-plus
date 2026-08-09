@@ -31,11 +31,15 @@ export async function verifyTurnstileRequest(
     body.set("remoteip", clientIp);
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
+
   try {
     const response = await fetch(TURNSTILE_VERIFY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -46,5 +50,7 @@ export async function verifyTurnstileRequest(
     return result.success === true && result.action === "turnstile-spin-v2";
   } catch {
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
