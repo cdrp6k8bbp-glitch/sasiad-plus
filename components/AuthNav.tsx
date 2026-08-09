@@ -50,19 +50,34 @@ export default function AuthNav({ userName }: { userName: string | null }) {
     };
   }, [userName]);
 
+  async function handleSignOut() {
+    if (isSigningOut) return;
+
+    setIsSigningOut(true);
+    const result = await signOut();
+
+    if (result.error) {
+      setIsSigningOut(false);
+      window.alert("Nie udało się wylogować. Spróbuj ponownie.");
+      return;
+    }
+
+    window.location.replace("/");
+  }
+
   if (!userName) {
     return (
       <div className="flex items-center gap-2">
         <Link
           href="/logowanie"
-          className="rounded-full px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
+          className="inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
         >
           Zaloguj się
         </Link>
 
         <Link
           href="/rejestracja"
-          className="hidden rounded-full border border-green-700 px-4 py-2 text-sm font-bold text-green-700 transition hover:bg-green-50 sm:inline-flex"
+          className="hidden min-h-11 items-center rounded-full border border-green-700 px-4 py-2 text-sm font-bold text-green-700 transition hover:bg-green-50 sm:inline-flex"
         >
           Załóż konto
         </Link>
@@ -71,17 +86,17 @@ export default function AuthNav({ userName }: { userName: string | null }) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       <Link
         href="/profil#ulubione"
-        className="hidden rounded-full px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 lg:inline-flex"
+        className="hidden min-h-11 items-center rounded-full px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 lg:inline-flex"
       >
         ♥ Ulubione
       </Link>
 
       <Link
         href="/profil#rezerwacje"
-        className="hidden rounded-full px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-50 xl:inline-flex"
+        className="hidden min-h-11 items-center rounded-full px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-50 xl:inline-flex"
       >
         Rezerwacje
       </Link>
@@ -93,7 +108,7 @@ export default function AuthNav({ userName }: { userName: string | null }) {
             ? `Powiadomienia, nieprzeczytane: ${notificationCount}`
             : "Powiadomienia"
         }
-        className="relative inline-flex rounded-full px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
+        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
       >
         <span aria-hidden="true" className="md:hidden">🔔</span>
         <span className="hidden md:inline">Powiadomienia</span>
@@ -111,7 +126,7 @@ export default function AuthNav({ userName }: { userName: string | null }) {
             ? `Wiadomości, nieprzeczytane: ${unreadCount}`
             : "Wiadomości"
         }
-        className="relative inline-flex rounded-full px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
+        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
       >
         <span aria-hidden="true" className="md:hidden">💬</span>
         <span className="hidden md:inline">Wiadomości</span>
@@ -122,34 +137,53 @@ export default function AuthNav({ userName }: { userName: string | null }) {
         )}
       </Link>
 
-      <Link
-        href="/profil"
-        className="max-w-36 truncate rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-800 transition hover:bg-green-100"
-      >
-        {userName}
-      </Link>
+      <details className="group relative sm:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-full bg-green-50 px-3 py-2 text-sm font-bold text-green-800 transition hover:bg-green-100 [&::-webkit-details-marker]:hidden">
+          Konto
+          <span aria-hidden="true" className="transition group-open:rotate-180">⌄</span>
+        </summary>
 
-      <button
-        type="button"
-        disabled={isSigningOut}
-        onClick={async () => {
-          if (isSigningOut) return;
+        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+          <p className="truncate border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-900">
+            {userName}
+          </p>
+          <Link href="/profil" className="flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Mój profil
+          </Link>
+          <Link href="/profil#ulubione" className="flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Ulubione
+          </Link>
+          <Link href="/profil#rezerwacje" className="flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Rezerwacje
+          </Link>
+          <button
+            type="button"
+            disabled={isSigningOut}
+            onClick={handleSignOut}
+            className="flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-left text-sm font-bold text-red-700 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+          >
+            {isSigningOut ? "Wylogowywanie…" : "Wyloguj"}
+          </button>
+        </div>
+      </details>
 
-          setIsSigningOut(true);
-          const result = await signOut();
+      <div className="hidden items-center gap-2 sm:flex">
+        <Link
+          href="/profil"
+          className="inline-flex min-h-11 max-w-36 items-center truncate rounded-full bg-green-50 px-4 py-2 text-sm font-bold text-green-800 transition hover:bg-green-100"
+        >
+          {userName}
+        </Link>
 
-          if (result.error) {
-            setIsSigningOut(false);
-            window.alert("Nie udało się wylogować. Spróbuj ponownie.");
-            return;
-          }
-
-          window.location.replace("/");
-        }}
-        className="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60 sm:inline-flex"
-      >
-        {isSigningOut ? "Wylogowywanie…" : "Wyloguj"}
-      </button>
+        <button
+          type="button"
+          disabled={isSigningOut}
+          onClick={handleSignOut}
+          className="inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60"
+        >
+          {isSigningOut ? "Wylogowywanie…" : "Wyloguj"}
+        </button>
+      </div>
     </div>
   );
 }
