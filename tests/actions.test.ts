@@ -201,6 +201,71 @@ describe("najważniejsze operacje aplikacji", () => {
     expect(notification.type).toBe("reservation_created");
   });
 
+  test("respektuje dni i godziny ustawione przez usługodawcę", async () => {
+    testDatabase.database
+      .prepare(
+        `UPDATE listings
+         SET availability_slots = ?,
+             availability_dates = '2030-08-09,2030-08-10',
+             availability_weekdays = '1,2,3,4,5,6,0',
+             availability_start_time = '10:00',
+             availability_end_time = '20:00'
+         WHERE id = 1`,
+      )
+      .run(
+        JSON.stringify([
+          { date: "2030-08-09", startTime: "16:00", endTime: "20:00" },
+          { date: "2030-08-10", startTime: "10:00", endTime: "14:00" },
+        ]),
+      );
+    signIn(requester);
+
+    const unavailableDay = reservationForm();
+    unavailableDay.set("start_date", "2030-08-12");
+    unavailableDay.set("end_date", "2030-08-12");
+    unavailableDay.set("start_time", "16:00");
+    unavailableDay.set("end_time", "20:00");
+
+    await expect(createReservation(unavailableDay)).rejects.toThrow(
+      "Wybrany termin jest poza dniami lub godzinami dostępnymi u usługodawcy.",
+    );
+
+    const unavailableHour = reservationForm();
+    unavailableHour.set("start_date", "2030-08-09");
+    unavailableHour.set("end_date", "2030-08-09");
+    unavailableHour.set("start_time", "15:30");
+    unavailableHour.set("end_time", "20:00");
+
+    await expect(createReservation(unavailableHour)).rejects.toThrow(
+      "Wybrany termin jest poza dniami lub godzinami dostępnymi u usługodawcy.",
+    );
+
+    const hoursFromAnotherDay = reservationForm();
+    hoursFromAnotherDay.set("start_date", "2030-08-10");
+    hoursFromAnotherDay.set("end_date", "2030-08-10");
+    hoursFromAnotherDay.set("start_time", "16:00");
+    hoursFromAnotherDay.set("end_time", "20:00");
+
+    await expect(createReservation(hoursFromAnotherDay)).rejects.toThrow(
+      "Wybrany termin jest poza dniami lub godzinami dostępnymi u usługodawcy.",
+    );
+
+    const availableSlot = reservationForm();
+    availableSlot.set("start_date", "2030-08-09");
+    availableSlot.set("end_date", "2030-08-09");
+    availableSlot.set("start_time", "16:00");
+    availableSlot.set("end_time", "20:00");
+
+    await expect(createReservation(availableSlot)).rejects.toThrow(
+      "NEXT_REDIRECT:/ogloszenie/1?rezerwacja=wyslana",
+    );
+
+    const reservations = testDatabase.database
+      .prepare("SELECT COUNT(*) AS count FROM reservations WHERE listing_id = 1")
+      .get() as { count: number };
+    expect(reservations.count).toBe(1);
+  });
+
   test("pozwala wysłać wiadomość tylko uczestnikowi rozmowy", async () => {
     testDatabase.database
       .prepare(

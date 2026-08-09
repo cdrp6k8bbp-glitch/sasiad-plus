@@ -14,6 +14,11 @@ export type Listing = {
   owner_id: string | null;
   owner_name: string | null;
   is_reserved: number;
+  availability_slots: string | null;
+  availability_dates: string | null;
+  availability_weekdays: string;
+  availability_start_time: string;
+  availability_end_time: string;
   archived_at: string | null;
   created_at: string;
 };
@@ -30,6 +35,11 @@ const LISTING_COLUMNS = `
   listings.image_key,
   listings.image_keys,
   listings.owner_id,
+  listings.availability_slots,
+  listings.availability_dates,
+  listings.availability_weekdays,
+  listings.availability_start_time,
+  listings.availability_end_time,
   listings.archived_at,
   listings.created_at,
   EXISTS (

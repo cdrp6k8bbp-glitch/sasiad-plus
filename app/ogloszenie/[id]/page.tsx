@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import OwnerSummary from "@/components/OwnerSummary";
 import ListingGallery from "@/components/ListingGallery";
+import ReservationDateTimeFields from "@/components/ReservationDateTimeFields";
 import { auth } from "@/lib/auth";
 import { getListingById } from "@/lib/db";
 import { parseListingImageKeys } from "@/lib/listing-images";
@@ -21,6 +22,12 @@ import {
 import { getReviewSummary } from "@/lib/reviews";
 import { reportListing } from "@/app/zgloszenia/actions";
 import { getUserBlockState } from "@/lib/user-blocks";
+import {
+  availableDatesForCalendar,
+  formatListingAvailability,
+  listingAvailabilityFromStorage,
+  todayIsoInPoland,
+} from "@/lib/listing-availability";
 
 const categoryNames: Record<string, string> = {
   sprzet: "Sprzęt",
@@ -89,6 +96,16 @@ export default async function ListingPage({
   const contactBlocked = Boolean(
     blockState?.blockedByViewer || blockState?.viewerBlockedByUser,
   );
+  const availability = listingAvailabilityFromStorage({
+    slots: listing.availability_slots,
+    dates: listing.availability_dates,
+    weekdays: listing.availability_weekdays,
+    startTime: listing.availability_start_time,
+    endTime: listing.availability_end_time,
+  });
+  const today = todayIsoInPoland();
+  const hasAvailableDates =
+    availableDatesForCalendar(availability, today).length > 0;
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
@@ -212,6 +229,19 @@ export default async function ListingPage({
                 </p>
               </div>
 
+              {!isArchived && listing.owner_id && (
+                <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-900">
+                  <p className="text-sm font-black">🗓️ Dostępne terminy</p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {formatListingAvailability(availability)}
+                  </p>
+                  <p className="mt-1 text-xs text-green-800">
+                    Rezerwacja może rozpocząć i zakończyć się tylko w tych
+                    dniach i godzinach.
+                  </p>
+                </div>
+              )}
+
               {!listing.owner_id ? (
                 <p className="mt-6 rounded-2xl bg-slate-100 p-4 text-center text-sm font-semibold text-slate-600">
                   Kontakt jest niedostępny dla starszego ogłoszenia.
@@ -317,8 +347,8 @@ export default async function ListingPage({
                           </p>
                         )}
                         <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
-                          Wybierz dzień i godziny w czasie lokalnym. Dostępne są
-                          przedziały co 30 minut.
+                          Wybierz dzień z dostępnego harmonogramu i godziny w
+                          czasie lokalnym. Dostępne są przedziały co 30 minut.
                         </p>
                         {acceptedReservationSlots.length > 0 && (
                           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -336,62 +366,10 @@ export default async function ListingPage({
                             </ul>
                           </div>
                         )}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label htmlFor="start_date" className="text-sm font-bold text-slate-700">
-                              Dzień od
-                            </label>
-                            <input
-                              id="start_date"
-                              name="start_date"
-                              type="date"
-                              min={new Date().toISOString().slice(0, 10)}
-                              required
-                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="end_date" className="text-sm font-bold text-slate-700">
-                              Dzień do
-                            </label>
-                            <input
-                              id="end_date"
-                              name="end_date"
-                              type="date"
-                              min={new Date().toISOString().slice(0, 10)}
-                              required
-                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="start_time" className="text-sm font-bold text-slate-700">
-                              Godzina od
-                            </label>
-                            <input
-                              id="start_time"
-                              name="start_time"
-                              type="time"
-                              step={1800}
-                              defaultValue="09:00"
-                              required
-                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="end_time" className="text-sm font-bold text-slate-700">
-                              Godzina do
-                            </label>
-                            <input
-                              id="end_time"
-                              name="end_time"
-                              type="time"
-                              step={1800}
-                              defaultValue="17:00"
-                              required
-                              className="mt-1 w-full rounded-xl border border-slate-300 p-3"
-                            />
-                          </div>
-                        </div>
+                        <ReservationDateTimeFields
+                          availability={availability}
+                          today={today}
+                        />
                         <div>
                           <label htmlFor="reservation_note" className="text-sm font-bold text-slate-700">
                             Wiadomość (opcjonalnie)
@@ -407,9 +385,12 @@ export default async function ListingPage({
                         </div>
                         <button
                           type="submit"
-                          className="w-full rounded-2xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800"
+                          disabled={!hasAvailableDates}
+                          className="w-full rounded-2xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                         >
-                          Wyślij prośbę o rezerwację
+                          {hasAvailableDates
+                            ? "Wyślij prośbę o rezerwację"
+                            : "Brak dostępnych terminów"}
                         </button>
                       </form>
                     </>

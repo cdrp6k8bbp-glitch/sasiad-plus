@@ -3,9 +3,11 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import CategoryFields from "@/components/CategoryFields";
 import ImageUploader from "@/components/ImageUploader";
+import ListingAvailabilityFields from "@/components/ListingAvailabilityFields";
 import { auth } from "@/lib/auth";
 import { getListingById } from "@/lib/db";
 import { parseListingImageKeys } from "@/lib/listing-images";
+import { todayIsoInPoland } from "@/lib/listing-availability";
 import { updateListing } from "@/app/ogloszenie/actions";
 
 const fieldClassName =
@@ -42,10 +44,11 @@ export default async function EditListingPage({
     listing.image_key,
   );
   const updateListingWithId = updateListing.bind(null, listingId);
+  const today = todayIsoInPoland();
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 py-10 text-slate-900 md:p-8">
-      <div className="mx-auto max-w-xl">
+      <div className="mx-auto max-w-5xl">
         <Link
           href={`/ogloszenie/${listing.id}`}
           className="font-semibold text-green-700 hover:underline"
@@ -57,7 +60,7 @@ export default async function EditListingPage({
           ✏️ Edytuj ogłoszenie
         </h1>
         <p className="mt-4 text-slate-600">
-          Zmień treść, cenę, lokalizację lub zdjęcia swojej oferty.
+          Zmień treść, cenę, lokalizację, zdjęcia lub dostępne terminy.
         </p>
 
         <form
@@ -96,6 +99,15 @@ export default async function EditListingPage({
           </div>
 
           <ImageUploader initialImageKeys={imageKeys} />
+
+          <ListingAvailabilityFields
+            today={today}
+            initialSlots={listing.availability_slots}
+            initialDates={listing.availability_dates}
+            initialWeekdays={listing.availability_weekdays}
+            initialStartTime={listing.availability_start_time}
+            initialEndTime={listing.availability_end_time}
+          />
 
           <div>
             <label htmlFor="price" className="mb-2 block text-sm font-bold text-slate-700">

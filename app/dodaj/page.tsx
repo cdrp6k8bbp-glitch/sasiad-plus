@@ -1,6 +1,8 @@
 import CategoryFields from "@/components/CategoryFields";
 import ImageUploader from "@/components/ImageUploader";
+import ListingAvailabilityFields from "@/components/ListingAvailabilityFields";
 import { auth } from "@/lib/auth";
+import { todayIsoInPoland } from "@/lib/listing-availability";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { addListing } from "./actions";
@@ -15,9 +17,11 @@ export default async function Dodaj() {
     redirect("/logowanie?redirect=/dodaj");
   }
 
+  const today = todayIsoInPoland();
+
   return (
     <main className="min-h-screen bg-slate-50 p-4 py-10 text-slate-900 md:p-8">
-      <div className="mx-auto max-w-xl">
+      <div className="mx-auto max-w-5xl">
         <h1 className="text-4xl font-black text-green-700">
           ➕ Dodaj ogłoszenie
         </h1>
@@ -66,6 +70,8 @@ export default async function Dodaj() {
           </div>
 
           <ImageUploader />
+
+          <ListingAvailabilityFields today={today} />
 
           <div>
             <label

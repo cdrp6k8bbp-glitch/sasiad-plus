@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 import { enforceRateLimits, RATE_LIMITS } from "@/lib/anti-spam";
 import { auth } from "@/lib/auth";
 import { sendReservationUpdateEmail } from "@/lib/email";
+import {
+  isReservationWithinAvailability,
+  listingAvailabilityFromStorage,
+} from "@/lib/listing-availability";
 import { createNotificationStatement } from "@/lib/notifications";
 import { sendPushNotification, type PushEnv } from "@/lib/push";
 import { areUsersBlocked } from "@/lib/user-blocks";
@@ -167,6 +171,11 @@ export async function createReservation(formData: FormData): Promise<void> {
     `SELECT
        listings.owner_id,
        listings.title,
+       listings.availability_slots,
+       listings.availability_dates,
+       listings.availability_weekdays,
+       listings.availability_start_time,
+       listings.availability_end_time,
        owner.email AS owner_email
      FROM listings
      JOIN "user" AS owner ON owner.id = listings.owner_id
@@ -174,7 +183,16 @@ export async function createReservation(formData: FormData): Promise<void> {
      LIMIT 1`,
   )
     .bind(listingId)
-    .first<{ owner_id: string | null; title: string; owner_email: string }>();
+    .first<{
+      owner_id: string | null;
+      title: string;
+      owner_email: string;
+      availability_slots: string | null;
+      availability_dates: string | null;
+      availability_weekdays: string | null;
+      availability_start_time: string | null;
+      availability_end_time: string | null;
+    }>();
 
   if (!listing?.owner_id) {
     throw new Error("To ogłoszenie nie przyjmuje jeszcze rezerwacji.");
@@ -182,6 +200,28 @@ export async function createReservation(formData: FormData): Promise<void> {
 
   if (listing.owner_id === session.user.id) {
     throw new Error("Nie można rezerwować własnego ogłoszenia.");
+  }
+
+  const availability = listingAvailabilityFromStorage({
+    slots: listing.availability_slots,
+    dates: listing.availability_dates,
+    weekdays: listing.availability_weekdays,
+    startTime: listing.availability_start_time,
+    endTime: listing.availability_end_time,
+  });
+
+  if (
+    !isReservationWithinAvailability(
+      availability,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+    )
+  ) {
+    throw new Error(
+      "Wybrany termin jest poza dniami lub godzinami dostępnymi u usługodawcy.",
+    );
   }
 
   if (await areUsersBlocked(env.DB, session.user.id, listing.owner_id)) {

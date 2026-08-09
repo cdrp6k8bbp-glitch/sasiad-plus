@@ -11,6 +11,12 @@ import {
   isValidSubcategory,
 } from "@/lib/categories";
 import { parseListingImageKeys } from "@/lib/listing-images";
+import {
+  availabilityDatesValue,
+  availabilitySlotsValue,
+  availabilityWeekdaysValue,
+  readListingAvailability,
+} from "@/lib/listing-availability";
 
 type CurrentListing = {
   owner_id: string | null;
@@ -93,6 +99,7 @@ export async function updateListing(
   const location = requiredText(formData, "location");
   const description = optionalText(formData, "description") ?? "";
   const imageKeys = imageKeysFromForm(formData);
+  const availability = readListingAvailability(formData);
 
   if (!isCategoryKey(category)) {
     throw new Error("Wybrana kategoria jest nieprawidłowa.");
@@ -158,7 +165,12 @@ export async function updateListing(
            location = ?,
            icon = ?,
            image_key = ?,
-           image_keys = ?
+           image_keys = ?,
+           availability_slots = ?,
+           availability_dates = ?,
+           availability_weekdays = ?,
+           availability_start_time = ?,
+           availability_end_time = ?
        WHERE id = ? AND owner_id = ?`,
     )
       .bind(
@@ -171,6 +183,11 @@ export async function updateListing(
         CATEGORIES[category].icon,
         imageKeys[0] ?? null,
         imageKeys.length > 0 ? JSON.stringify(imageKeys) : null,
+        availabilitySlotsValue(availability.slots),
+        availabilityDatesValue(availability.dates),
+        availabilityWeekdaysValue(availability.weekdays),
+        availability.startTime,
+        availability.endTime,
         listingId,
         session.user.id,
       )

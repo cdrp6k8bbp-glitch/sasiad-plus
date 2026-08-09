@@ -11,6 +11,12 @@ import {
   isCategoryKey,
   isValidSubcategory,
 } from "@/lib/categories";
+import {
+  availabilityDatesValue,
+  availabilitySlotsValue,
+  availabilityWeekdaysValue,
+  readListingAvailability,
+} from "@/lib/listing-availability";
 
 function readRequiredText(formData: FormData, field: string): string {
   const value = formData.get(field);
@@ -74,6 +80,7 @@ export async function addListing(formData: FormData): Promise<void> {
   const description = readOptionalText(formData, "description") ?? "";
   const imageKeys = readImageKeys(formData);
   const imageKey = imageKeys[0] ?? null;
+  const availability = readListingAvailability(formData);
 
   if (!isCategoryKey(category)) {
     throw new Error("Wybrana kategoria jest nieprawidłowa.");
@@ -116,8 +123,13 @@ export async function addListing(formData: FormData): Promise<void> {
         icon,
         image_key,
         image_keys,
-        owner_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        owner_id,
+        availability_slots,
+        availability_dates,
+        availability_weekdays,
+        availability_start_time,
+        availability_end_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         title,
@@ -130,6 +142,11 @@ export async function addListing(formData: FormData): Promise<void> {
         imageKey,
         imageKeys.length > 0 ? JSON.stringify(imageKeys) : null,
         session.user.id,
+        availabilitySlotsValue(availability.slots),
+        availabilityDatesValue(availability.dates),
+        availabilityWeekdaysValue(availability.weekdays),
+        availability.startTime,
+        availability.endTime,
       )
       .run();
   } catch (error) {
