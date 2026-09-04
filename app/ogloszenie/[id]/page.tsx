@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import OwnerSummary from "@/components/OwnerSummary";
 import ListingGallery from "@/components/ListingGallery";
 import ReservationDateTimeFields from "@/components/ReservationDateTimeFields";
@@ -23,6 +25,11 @@ import { getReviewSummary } from "@/lib/reviews";
 import { reportListing } from "@/app/zgloszenia/actions";
 import { getUserBlockState } from "@/lib/user-blocks";
 import {
+  absoluteUrl,
+  listingImageUrl,
+  metadataDescription,
+} from "@/lib/seo";
+import {
   availableDatesForCalendar,
   formatListingAvailability,
   listingAvailabilityFromStorage,
@@ -40,6 +47,68 @@ const categoryNames: Record<string, string> = {
   dom: "Dom",
   rozwoj: "Rozwój osobisty",
 };
+
+const getListing = cache(getListingById);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const listingId = Number(id);
+
+  if (!Number.isInteger(listingId) || listingId < 1) {
+    return {
+      title: "Ogłoszenie niedostępne",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const listing = await getListing(listingId);
+
+  if (!listing) {
+    return {
+      title: "Ogłoszenie niedostępne",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const description = metadataDescription(
+    `${listing.description} Lokalizacja: ${listing.location}.`,
+  );
+  const canonicalPath = `/ogloszenie/${listing.id}`;
+  const imageKey = parseListingImageKeys(
+    listing.image_keys,
+    listing.image_key,
+  )[0];
+  const image = imageKey
+    ? listingImageUrl(imageKey)
+    : absoluteUrl("/og-image.png");
+
+  return {
+    title: listing.title,
+    description,
+    alternates: { canonical: canonicalPath },
+    robots: listing.archived_at
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      url: canonicalPath,
+      title: listing.title,
+      description,
+      images: [{ url: image, alt: listing.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: listing.title,
+      description,
+      images: [image],
+    },
+  };
+}
 
 export default async function ListingPage({
   params,
@@ -60,7 +129,7 @@ export default async function ListingPage({
     notFound();
   }
 
-  const listing = await getListingById(listingId);
+  const listing = await getListing(listingId);
 
   if (!listing) {
     notFound();
@@ -97,6 +166,8 @@ export default async function ListingPage({
     blockState?.blockedByViewer || blockState?.viewerBlockedByUser,
   );
   const availability = listingAvailabilityFromStorage({
+    mode: listing.availability_mode,
+    note: listing.availability_note,
     slots: listing.availability_slots,
     dates: listing.availability_dates,
     weekdays: listing.availability_weekdays,
@@ -225,19 +296,26 @@ export default async function ListingPage({
                     ? "Właściciel może je ponownie przywrócić."
                     : isOwner
                     ? "Prośby o rezerwację znajdziesz w swoim profilu."
+                    : availability.mode === "flexible"
+                    ? "Napisz do właściciela i wspólnie ustalcie dogodny termin."
                     : "Wybierz termin i wyślij prośbę do właściciela."}
                 </p>
               </div>
 
               {!isArchived && listing.owner_id && (
                 <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-900">
-                  <p className="text-sm font-black">🗓️ Dostępne terminy</p>
+                  <p className="text-sm font-black">
+                    {availability.mode === "flexible"
+                      ? "💬 Termin do ustalenia"
+                      : "🗓️ Dostępne terminy"}
+                  </p>
                   <p className="mt-1 text-sm font-semibold">
                     {formatListingAvailability(availability)}
                   </p>
                   <p className="mt-1 text-xs text-green-800">
-                    Rezerwacja może rozpocząć i zakończyć się tylko w tych
-                    dniach i godzinach.
+                    {availability.mode === "flexible"
+                      ? "Wyślij wiadomość, aby uzgodnić konkretny dzień i godzinę."
+                      : "Rezerwacja może rozpocząć i zakończyć się tylko w tych dniach i godzinach."}
                   </p>
                 </div>
               )}
@@ -264,7 +342,9 @@ export default async function ListingPage({
                   href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
                   className="mt-6 flex w-full items-center justify-center rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
                 >
-                  Zaloguj się, aby napisać
+                  {availability.mode === "flexible"
+                    ? "Zaloguj się, aby zapytać o dostępność"
+                    : "Zaloguj się, aby napisać"}
                 </Link>
               ) : (
                 <form action={startConversation}>
@@ -273,7 +353,9 @@ export default async function ListingPage({
                     type="submit"
                     className="mt-6 w-full rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
                   >
-                    Napisz do właściciela
+                    {availability.mode === "flexible"
+                      ? "Zapytaj o dostępność"
+                      : "Napisz do właściciela"}
                   </button>
                 </form>
               )}
@@ -289,7 +371,8 @@ export default async function ListingPage({
               {listing.owner_id &&
                 !isOwner &&
                 !isArchived &&
-                !contactBlocked && (
+                !contactBlocked &&
+                availability.mode === "specific" && (
                 <div className="mt-6 border-t border-slate-200 pt-6">
                   <h2 className="text-xl font-black">Zarezerwuj termin</h2>
 

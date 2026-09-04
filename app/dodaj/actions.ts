@@ -124,12 +124,14 @@ export async function addListing(formData: FormData): Promise<void> {
         image_key,
         image_keys,
         owner_id,
+        availability_mode,
+        availability_note,
         availability_slots,
         availability_dates,
         availability_weekdays,
         availability_start_time,
         availability_end_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         title,
@@ -142,6 +144,8 @@ export async function addListing(formData: FormData): Promise<void> {
         imageKey,
         imageKeys.length > 0 ? JSON.stringify(imageKeys) : null,
         session.user.id,
+        availability.mode,
+        availability.note,
         availabilitySlotsValue(availability.slots),
         availabilityDatesValue(availability.dates),
         availabilityWeekdaysValue(availability.weekdays),

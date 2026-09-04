@@ -14,7 +14,11 @@ export type AvailabilitySlot = {
   endTime: string;
 };
 
+export type AvailabilityMode = "specific" | "flexible";
+
 export type ListingAvailability = {
+  mode: AvailabilityMode;
+  note: string | null;
   slots: AvailabilitySlot[] | null;
   dates: string[] | null;
   weekdays: number[];
@@ -23,6 +27,8 @@ export type ListingAvailability = {
 };
 
 export const DEFAULT_LISTING_AVAILABILITY: ListingAvailability = {
+  mode: "specific",
+  note: null,
   slots: null,
   dates: null,
   weekdays: [1, 2, 3, 4, 5],
@@ -173,6 +179,8 @@ function availabilityFromSlots(slots: AvailabilitySlot[]): ListingAvailability {
   ];
 
   return {
+    mode: "specific",
+    note: null,
     slots,
     dates,
     weekdays,
@@ -213,6 +221,8 @@ export function availableDatesForCalendar(
   availability: ListingAvailability,
   today: string,
 ): string[] {
+  if (availability.mode === "flexible") return [];
+
   const { minDate, maxDate } = calendarWindowForIsoDate(today);
 
   if (availability.slots !== null) {
@@ -234,6 +244,31 @@ export function readListingAvailability(
   formData: FormData,
   today = todayIsoInPoland(),
 ): ListingAvailability {
+  const modeValue = formData.get("availability_mode");
+  const mode: AvailabilityMode =
+    modeValue === "flexible" ? "flexible" : "specific";
+  const noteValue = formData.get("availability_note");
+  const note =
+    typeof noteValue === "string" && noteValue.trim().length > 0
+      ? noteValue.trim()
+      : null;
+
+  if (note && note.length > 300) {
+    throw new Error("Informacja o dostępności może mieć maksymalnie 300 znaków.");
+  }
+
+  if (mode === "flexible") {
+    return {
+      mode,
+      note,
+      slots: null,
+      dates: null,
+      weekdays: [],
+      startTime: DEFAULT_LISTING_AVAILABILITY.startTime,
+      endTime: DEFAULT_LISTING_AVAILABILITY.endTime,
+    };
+  }
+
   const slotsValue = formData.get("availability_slots");
   const { minDate, maxDate } = calendarWindowForIsoDate(today);
 
@@ -311,22 +346,46 @@ export function readListingAvailability(
     ),
   ];
 
-  return { slots: null, dates, weekdays, startTime, endTime };
+  return {
+    mode: "specific",
+    note: null,
+    slots: null,
+    dates,
+    weekdays,
+    startTime,
+    endTime,
+  };
 }
 
 export function listingAvailabilityFromStorage({
+  mode,
+  note,
   slots,
   dates,
   weekdays,
   startTime,
   endTime,
 }: {
+  mode?: string | null;
+  note?: string | null;
   slots?: string | null;
   dates?: string | null;
   weekdays: string | null;
   startTime: string | null;
   endTime: string | null;
 }): ListingAvailability {
+  if (mode === "flexible") {
+    return {
+      mode: "flexible",
+      note: note?.trim() || null,
+      slots: null,
+      dates: null,
+      weekdays: [],
+      startTime: DEFAULT_LISTING_AVAILABILITY.startTime,
+      endTime: DEFAULT_LISTING_AVAILABILITY.endTime,
+    };
+  }
+
   if (slots != null) {
     const parsedSlots = parseAvailabilitySlots(slots);
     if (parsedSlots.length > 0) return availabilityFromSlots(parsedSlots);
@@ -345,12 +404,16 @@ export function listingAvailabilityFromStorage({
   ) {
     return {
       ...DEFAULT_LISTING_AVAILABILITY,
+      mode: "specific",
+      note: null,
       slots: null,
       dates: parsedDates,
     };
   }
 
   return {
+    mode: "specific",
+    note: null,
     slots: null,
     dates: parsedDates,
     weekdays: parsedWeekdays,
@@ -379,6 +442,8 @@ export function availabilitySlotForDate(
   availability: ListingAvailability,
   date: string,
 ): AvailabilitySlot | null {
+  if (availability.mode === "flexible") return null;
+
   if (availability.slots !== null) {
     return availability.slots.find((slot) => slot.date === date) ?? null;
   }
@@ -425,6 +490,8 @@ export function isReservationWithinAvailability(
   endDate: string,
   endTime: string,
 ): boolean {
+  if (availability.mode === "flexible") return false;
+
   const reservationDates = isoDatesInRange(startDate, endDate);
   if (reservationDates.length === 0) return false;
 
@@ -479,6 +546,10 @@ export function formatPolishIsoDate(value: string): string {
 export function formatListingAvailability(
   availability: ListingAvailability,
 ): string {
+  if (availability.mode === "flexible") {
+    return availability.note || "Termin do ustalenia z właścicielem.";
+  }
+
   if (availability.slots !== null) {
     if (availability.slots.length === 0) {
       return "Brak przyszłych terminów";

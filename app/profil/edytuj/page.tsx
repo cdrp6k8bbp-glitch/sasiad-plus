@@ -6,7 +6,12 @@ import { auth } from "@/lib/auth";
 import { getUserProfileDetails } from "@/lib/profiles";
 import { updateProfile } from "./actions";
 
-export default async function EditProfilePage() {
+export default async function EditProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ "nowe-konto"?: string }>;
+}) {
+  const params = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
@@ -30,6 +35,18 @@ export default async function EditProfilePage() {
         <Link href="/profil" className="font-semibold text-green-700 hover:underline">
           ← Wróć do profilu
         </Link>
+
+        {params["nowe-konto"] === "1" && (
+          <div
+            role="status"
+            className="mt-7 rounded-3xl border border-green-200 bg-green-50 p-5 text-green-900"
+          >
+            <p className="font-black">Adres e-mail został potwierdzony — witaj w Sąsiad+!</p>
+            <p className="mt-1 text-sm leading-6">
+              Uzupełnij miejscowość i kilka słów o sobie. Pomoże to sąsiadom lepiej Cię poznać.
+            </p>
+          </div>
+        )}
 
         <section className="mt-7 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <p className="font-semibold text-green-700">Twoja wizytówka</p>

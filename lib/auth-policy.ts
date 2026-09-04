@@ -9,6 +9,10 @@ import {
   TURNSTILE_ERROR_CODE,
   TURNSTILE_ERROR_MESSAGE,
 } from "@/lib/turnstile";
+import {
+  ACCOUNT_ALREADY_EXISTS_ERROR_CODE,
+  ACCOUNT_ALREADY_EXISTS_ERROR_MESSAGE,
+} from "@/lib/auth-errors";
 
 type VerifyTurnstile = (
   request: Request,
@@ -60,6 +64,7 @@ export const AUTH_RATE_LIMIT_POLICY = {
     "/change-password": { window: 300, max: 5 },
     "/delete-user": { window: 300, max: 3 },
     "/request-password-reset": { window: 60, max: 3 },
+    "/send-verification-email": { window: 60, max: 3 },
     "/reset-password": { window: 300, max: 5 },
   },
 } as const;
@@ -115,6 +120,20 @@ export function createAuthBeforeHook({
         code: TURNSTILE_ERROR_CODE,
         message: TURNSTILE_ERROR_MESSAGE,
       });
+    }
+
+    if (context.path === "/sign-up/email") {
+      const email = String(context.body.email ?? "").trim().toLowerCase();
+      const existingUser = email
+        ? await context.context.internalAdapter.findUserByEmail(email)
+        : null;
+
+      if (existingUser) {
+        throw APIError.from("BAD_REQUEST", {
+          code: ACCOUNT_ALREADY_EXISTS_ERROR_CODE,
+          message: ACCOUNT_ALREADY_EXISTS_ERROR_MESSAGE,
+        });
+      }
     }
   });
 }

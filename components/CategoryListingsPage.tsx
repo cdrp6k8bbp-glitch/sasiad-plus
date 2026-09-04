@@ -9,11 +9,16 @@ type CategoryListingsPageProps = {
   categories: string | string[];
   description: string;
   icon: string;
-  pathname: "/rozwoj-osobisty" | "/sprzet" | "/uslugi";
+  pathname: string;
   searchParams: Promise<{
     q?: string | string[];
     location?: string | string[];
   }>;
+  seoContent?: {
+    heading: string;
+    paragraphs: readonly string[];
+    searches: readonly string[];
+  };
   title: string;
 };
 
@@ -27,6 +32,7 @@ export default async function CategoryListingsPage({
   icon,
   pathname,
   searchParams,
+  seoContent,
   title,
 }: CategoryListingsPageProps) {
   const params = await searchParams;
@@ -237,6 +243,39 @@ export default async function CategoryListingsPage({
           </div>
         )}
       </section>
+
+      {seoContent && !isSearching && (
+        <section className="mx-auto max-w-7xl px-4 pb-16 md:px-8">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <div className="max-w-4xl">
+              <p className="font-semibold text-green-700">Lokalnie i wygodnie</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight md:text-3xl">
+                {seoContent.heading}
+              </h2>
+              <div className="mt-5 space-y-4 leading-7 text-slate-600">
+                {seoContent.paragraphs.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 border-t border-slate-100 pt-6">
+              <h3 className="font-black text-slate-900">Popularne wyszukiwania</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {seoContent.searches.map((search) => (
+                  <Link
+                    key={search}
+                    href={`${pathname}?q=${encodeURIComponent(search)}`}
+                    className="rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-bold text-green-800 transition hover:border-green-400 hover:bg-green-100"
+                  >
+                    {search}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
         <Link href="/" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-slate-600">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import { signIn, signUp } from "@/lib/auth-client";
 import TurnstileWidget, {
   resetTurnstile,
@@ -12,6 +12,16 @@ import {
   PRIVACY_POLICY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal";
+import {
+  ACCOUNT_ALREADY_EXISTS_ERROR_CODE,
+  ACCOUNT_ALREADY_EXISTS_ERROR_MESSAGE,
+  getLoginErrorMessage,
+} from "@/lib/auth-errors";
+import {
+  EMAIL_VERIFICATION_CALLBACK_URL,
+  EMAIL_VERIFICATION_STORAGE_KEY,
+  normalizeEmail,
+} from "@/lib/email-verification";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -24,25 +34,35 @@ const fieldClassName =
 export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [accountAlreadyExists, setAccountAlreadyExists] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const isRegister = mode === "register";
+
+  const handleTurnstileTokenChange = useCallback((token: string | null) => {
+    setTurnstileToken(token);
+    if (token) {
+      setError((currentError) =>
+        currentError === "Zabezpieczenie jeszcze się przygotowuje."
+          ? null
+          : currentError,
+      );
+    }
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+    setAccountAlreadyExists(false);
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const legalAcceptance = formData.get("legalAcceptance") === "on";
-    const turnstileToken = String(
-      formData.get("cf-turnstile-response") ?? "",
-    ).trim();
-
     if (!turnstileToken) {
-      setError("Poczekaj na zakończenie weryfikacji bezpieczeństwa.");
+      setError("Zabezpieczenie jeszcze się przygotowuje.");
       setIsSubmitting(false);
       return;
     }
@@ -67,7 +87,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
         legalAcceptance,
         termsAcceptedVersion: TERMS_VERSION,
         privacyAcknowledgedVersion: PRIVACY_POLICY_VERSION,
-        callbackURL: redirectTo,
+        callbackURL: EMAIL_VERIFICATION_CALLBACK_URL,
         fetchOptions: {
           headers: { "x-turnstile-token": turnstileToken },
           signal: requestController.signal,
@@ -86,6 +106,11 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
           });
 
       if (result.error) {
+        if (result.error.code === ACCOUNT_ALREADY_EXISTS_ERROR_CODE) {
+          setAccountAlreadyExists(true);
+          return;
+        }
+
         if (result.error.code === LEGAL_ACCEPTANCE_ERROR_CODE) {
           setError(
             "Aby założyć konto, zaakceptuj regulamin i potwierdź zapoznanie się z polityką prywatności.",
@@ -100,10 +125,8 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
           return;
         }
 
-        if (!isRegister && result.error.status === 403) {
-          setError(
-            "Najpierw potwierdź adres e-mail. Wysłaliśmy nowy link na Twoją skrzynkę.",
-          );
+        if (!isRegister) {
+          setError(getLoginErrorMessage(result.error));
           return;
         }
 
@@ -117,9 +140,11 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
       }
 
       if (isRegister) {
-        setSuccess(
-          "Sprawdź skrzynkę e-mail. Jeśli adres nie był wcześniej użyty, znajdziesz tam link aktywujący konto.",
+        window.sessionStorage.setItem(
+          EMAIL_VERIFICATION_STORAGE_KEY,
+          normalizeEmail(email),
         );
+        window.location.assign("/sprawdz-email");
         return;
       }
 
@@ -137,6 +162,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
       }
     } finally {
       window.clearTimeout(requestTimeoutId);
+      setTurnstileToken(null);
       resetTurnstile();
       setIsSubmitting(false);
     }
@@ -243,7 +269,7 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
         </label>
       )}
 
-      <TurnstileWidget />
+      <TurnstileWidget onTokenChange={handleTurnstileTokenChange} />
 
       {error && (
         <div
@@ -251,6 +277,30 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
           className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
         >
           {error}
+        </div>
+      )}
+
+      {accountAlreadyExists && (
+        <div
+          role="alert"
+          className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+        >
+          <p className="font-bold">{ACCOUNT_ALREADY_EXISTS_ERROR_MESSAGE}</p>
+          <p className="mt-1">Zaloguj się albo ustaw nowe hasło.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/logowanie"
+              className="rounded-xl bg-green-700 px-4 py-2 font-bold text-white hover:bg-green-800"
+            >
+              Zaloguj się
+            </Link>
+            <Link
+              href="/nie-pamietam-hasla"
+              className="rounded-xl border border-amber-400 bg-white px-4 py-2 font-bold text-amber-950 hover:bg-amber-100"
+            >
+              Ustaw nowe hasło
+            </Link>
+          </div>
         </div>
       )}
 
@@ -265,11 +315,15 @@ export default function AuthForm({ mode, redirectTo = "/profil" }: AuthFormProps
 
       <button
         type="submit"
-        disabled={isSubmitting || Boolean(success)}
+        disabled={isSubmitting || Boolean(success) || !turnstileToken}
         className="w-full rounded-2xl bg-green-700 px-6 py-4 font-black text-white transition hover:bg-green-800 disabled:cursor-wait disabled:opacity-60"
       >
         {isSubmitting
-          ? "Proszę czekać…"
+          ? isRegister
+            ? "Zakładamy konto…"
+            : "Logujemy…"
+          : !turnstileToken
+            ? "Przygotowuję formularz…"
           : isRegister
             ? "Załóż konto"
             : "Zaloguj się"}

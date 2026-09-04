@@ -11,8 +11,9 @@ import {
 } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Polityka prywatności | Sąsiad+",
+  title: "Polityka prywatności",
   description: "Informacje o przetwarzaniu danych osobowych w Sąsiad+.",
+  alternates: { canonical: "/polityka-prywatnosci" },
 };
 
 export default function PolitykaPrywatnosciPage() {

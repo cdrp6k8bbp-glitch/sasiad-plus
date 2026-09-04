@@ -11,6 +11,7 @@ import {
   PRIVACY_POLICY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal";
+import { ACCOUNT_ALREADY_EXISTS_ERROR_CODE } from "@/lib/auth-errors";
 
 const baseURL = "http://localhost:3210";
 
@@ -110,6 +111,20 @@ describe("rejestracja i logowanie", () => {
       privacyAcknowledgedVersion: PRIVACY_POLICY_VERSION,
     });
     expect(user?.legalAcceptedAt).toBeTruthy();
+  });
+
+  test("informuje, że konto z podanym adresem już istnieje", async () => {
+    const response = await authRequest("/sign-up/email", {
+      name: "Inna Anna",
+      email: "anna@example.com",
+      password: "InneBardzoDobreHaslo123!",
+      legalAcceptance: true,
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: ACCOUNT_ALREADY_EXISTS_ERROR_CODE,
+    });
   });
 
   test("blokuje logowanie przed weryfikacją e-maila i wpuszcza po niej", async () => {

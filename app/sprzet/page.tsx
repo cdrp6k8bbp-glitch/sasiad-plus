@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import CategoryListingsPage from "@/components/CategoryListingsPage";
+
+export const metadata: Metadata = {
+  title: "Wypożyczalnia sprzętu i narzędzi w okolicy",
+  description:
+    "Znajdź narzędzia, sprzęt domowy, ogrodowy i turystyczny dostępny do pożyczenia od osób w Twojej okolicy.",
+  alternates: { canonical: "/sprzet" },
+};
 
 export default function Sprzet({
   searchParams,
@@ -15,6 +23,20 @@ export default function Sprzet({
       icon="🛠️"
       pathname="/sprzet"
       searchParams={searchParams}
+      seoContent={{
+        heading: "Wypożycz sprzęt i narzędzia od osób w swojej okolicy",
+        paragraphs: [
+          "Nie każdy sprzęt trzeba kupować na własność. W Sąsiad+ możesz znaleźć narzędzia remontowe, drabiny, myjki ciśnieniowe, odkurzacze przemysłowe, agregaty i osuszacze udostępniane lokalnie.",
+          "Wpisz nazwę potrzebnego urządzenia i miejscowość, porównaj dostępne ogłoszenia, a następnie skontaktuj się z właścicielem. Szczegóły odbioru, cenę i termin ustalacie bezpośrednio między sobą.",
+        ],
+        searches: [
+          "wiertarka",
+          "drabina",
+          "myjka ciśnieniowa",
+          "odkurzacz przemysłowy",
+          "osuszacz",
+        ],
+      }}
       title="Wypożycz sprzęt"
     />
   );

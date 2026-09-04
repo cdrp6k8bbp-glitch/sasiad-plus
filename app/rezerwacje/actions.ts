@@ -171,6 +171,8 @@ export async function createReservation(formData: FormData): Promise<void> {
     `SELECT
        listings.owner_id,
        listings.title,
+       listings.availability_mode,
+       listings.availability_note,
        listings.availability_slots,
        listings.availability_dates,
        listings.availability_weekdays,
@@ -187,6 +189,8 @@ export async function createReservation(formData: FormData): Promise<void> {
       owner_id: string | null;
       title: string;
       owner_email: string;
+      availability_mode: string | null;
+      availability_note: string | null;
       availability_slots: string | null;
       availability_dates: string | null;
       availability_weekdays: string | null;
@@ -203,12 +207,20 @@ export async function createReservation(formData: FormData): Promise<void> {
   }
 
   const availability = listingAvailabilityFromStorage({
+    mode: listing.availability_mode,
+    note: listing.availability_note,
     slots: listing.availability_slots,
     dates: listing.availability_dates,
     weekdays: listing.availability_weekdays,
     startTime: listing.availability_start_time,
     endTime: listing.availability_end_time,
   });
+
+  if (availability.mode === "flexible") {
+    throw new Error(
+      "Ten termin jest ustalany bezpośrednio z właścicielem. Wyślij do niego wiadomość.",
+    );
+  }
 
   if (
     !isReservationWithinAvailability(

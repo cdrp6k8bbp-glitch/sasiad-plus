@@ -102,6 +102,8 @@ export default async function EditListingPage({
 
           <ListingAvailabilityFields
             today={today}
+            initialMode={listing.availability_mode}
+            initialNote={listing.availability_note}
             initialSlots={listing.availability_slots}
             initialDates={listing.availability_dates}
             initialWeekdays={listing.availability_weekdays}

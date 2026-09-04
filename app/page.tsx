@@ -1,10 +1,43 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import { auth } from "@/lib/auth";
 import { CATEGORIES, isCategoryKey } from "@/lib/categories";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "Sąsiad+ — wypożyczalnia sprzętu i pomoc sąsiedzka",
+  },
+  description:
+    "Wypożyczaj sprzęt i narzędzia, znajdź pomoc sąsiedzką, opiekę oraz lokalne usługi w Słupsku i swojej okolicy.",
+  alternates: { canonical: "/" },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://sasiad-plus.com/#website",
+      url: "https://sasiad-plus.com/",
+      name: "Sąsiad+",
+      description:
+        "Lokalna platforma do wypożyczania sprzętu, znajdowania pomocy sąsiedzkiej i usług.",
+      inLanguage: "pl-PL",
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://sasiad-plus.com/#organization",
+      url: "https://sasiad-plus.com/",
+      name: "Sąsiad+",
+      description:
+        "Platforma łącząca osoby, które chcą pożyczać rzeczy, oferować pomoc i korzystać z lokalnych usług.",
+    },
+  ],
+};
 
 const categories = [
   {
@@ -23,31 +56,31 @@ const categories = [
     icon: "🐕",
     title: "Zwierzęta",
     description: "Spacery i opieka podczas urlopu",
-    href: "/uslugi",
+    href: "/kategoria/zwierzeta",
   },
   {
     icon: "👶",
     title: "Opieka nad dziećmi",
     description: "Opieka wieczorna i okazjonalna",
-    href: "/uslugi",
+    href: "/kategoria/dzieci",
   },
   {
     icon: "🏕️",
     title: "Turystyka",
     description: "Kampery, namioty, kajaki i SUP-y",
-    href: "/sprzet",
+    href: "/kategoria/turystyka",
   },
   {
     icon: "🌿",
     title: "Ogród",
     description: "Kosiarki i sprzęt ogrodowy",
-    href: "/sprzet",
+    href: "/kategoria/ogrod",
   },
   {
     icon: "🏠",
     title: "Dom",
     description: "Odkurzacze, osuszacze i wyposażenie",
-    href: "/sprzet",
+    href: "/kategoria/dom",
   },
   {
     icon: "🧘",
@@ -101,6 +134,12 @@ export default async function Home({
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-24 text-slate-900 md:pb-0">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
           <Link
@@ -397,6 +436,49 @@ export default async function Home({
           </div>
         </div>
       </section>
+
+      {!isSearching && (
+        <section className="mx-auto max-w-7xl px-4 py-14 md:px-8">
+          <div className="grid gap-8 rounded-[36px] border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[1.2fr_0.8fr] md:p-12">
+            <div>
+              <p className="font-semibold text-green-700">Blisko ludzi i potrzeb</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight">
+                Lokalna wypożyczalnia sprzętu i pomoc sąsiedzka
+              </h2>
+              <div className="mt-5 space-y-4 leading-7 text-slate-600">
+                <p>
+                  Sąsiad+ pomaga znaleźć rzeczy i usługi dostępne blisko domu.
+                  Możesz wyszukać wynajem narzędzi, sprzętu ogrodowego,
+                  odkurzacza piorącego, SUP-a lub kajaka, a także opiekę nad
+                  zwierzętami i pomoc w codziennych sprawach.
+                </p>
+                <p>
+                  Wpisz miejscowość — na przykład{" "}
+                  <Link className="font-semibold text-green-700 hover:underline" href="/slupsk">
+                    Słupsk
+                  </Link>{" "}
+                  — aby zobaczyć lokalne ogłoszenia. Kontakt, cenę, odbiór i
+                  dogodny termin ustalasz bezpośrednio z osobą dodającą ofertę.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-green-50 p-6">
+              <h3 className="text-xl font-black text-slate-900">
+                Najczęściej wybierane
+              </h3>
+              <ul className="mt-5 space-y-3 font-semibold text-green-800">
+                <li><Link className="hover:underline" href="/slupsk">Sprzęt i pomoc sąsiedzka w Słupsku →</Link></li>
+                <li><Link className="hover:underline" href="/sprzet?q=wiertarka">Wypożyczanie narzędzi i wiertarek →</Link></li>
+                <li><Link className="hover:underline" href="/kategoria/ogrod?q=kosiarka">Wynajem kosiarek i sprzętu ogrodowego →</Link></li>
+                <li><Link className="hover:underline" href="/kategoria/dom?q=odkurzacz+piorący">Odkurzacze piorące i sprzęt do domu →</Link></li>
+                <li><Link className="hover:underline" href="/kategoria/zwierzeta">Opieka nad psem i kotem →</Link></li>
+                <li><Link className="hover:underline" href="/uslugi">Pomoc sąsiedzka i lokalne usługi →</Link></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-2 py-2 shadow-2xl md:hidden">
         <Link href="/" className="flex flex-col items-center gap-1 p-2 text-xs font-medium text-green-700">

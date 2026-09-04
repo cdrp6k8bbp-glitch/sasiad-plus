@@ -11,8 +11,9 @@ import {
 } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Regulamin | Sąsiad+",
+  title: "Regulamin",
   description: "Regulamin korzystania z platformy Sąsiad+.",
+  alternates: { canonical: "/regulamin" },
 };
 
 export default function RegulaminPage() {

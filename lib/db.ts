@@ -14,6 +14,8 @@ export type Listing = {
   owner_id: string | null;
   owner_name: string | null;
   is_reserved: number;
+  availability_mode: string;
+  availability_note: string | null;
   availability_slots: string | null;
   availability_dates: string | null;
   availability_weekdays: string;
@@ -35,6 +37,8 @@ const LISTING_COLUMNS = `
   listings.image_key,
   listings.image_keys,
   listings.owner_id,
+  listings.availability_mode,
+  listings.availability_note,
   listings.availability_slots,
   listings.availability_dates,
   listings.availability_weekdays,

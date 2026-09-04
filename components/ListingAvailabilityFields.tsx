@@ -8,8 +8,7 @@ import {
   listingAvailabilityFromStorage,
   parseAvailabilityDates,
   parseAvailabilitySlots,
-  WEEKDAY_OPTIONS,
-  weekdayForIsoDate,
+  type AvailabilityMode,
   type AvailabilitySlot,
 } from "@/lib/listing-availability";
 
@@ -31,9 +30,8 @@ function buildCalendarMonths(today: string): CalendarMonth[] {
     const daysInMonth = new Date(
       Date.UTC(monthYear, monthIndex + 1, 0, 12),
     ).getUTCDate();
-    const leadingEmptyCells = (firstDay.getUTCDay() + 6) % 7;
     const cells: CalendarMonth["cells"] = Array.from(
-      { length: leadingEmptyCells },
+      { length: (firstDay.getUTCDay() + 6) % 7 },
       () => null,
     );
 
@@ -57,9 +55,7 @@ function buildCalendarMonths(today: string): CalendarMonth[] {
 function addThirtyMinutes(time: string): string {
   const [hours, minutes] = time.split(":").map(Number);
   const total = hours * 60 + minutes + 30;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
-    total % 60,
-  ).padStart(2, "0")}`;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
 function slotsByDate(slots: AvailabilitySlot[]): Record<string, AvailabilitySlot> {
@@ -68,6 +64,8 @@ function slotsByDate(slots: AvailabilitySlot[]): Record<string, AvailabilitySlot
 
 export default function ListingAvailabilityFields({
   today,
+  initialMode,
+  initialNote,
   initialSlots,
   initialDates,
   initialWeekdays,
@@ -75,6 +73,8 @@ export default function ListingAvailabilityFields({
   initialEndTime,
 }: {
   today: string;
+  initialMode?: string | null;
+  initialNote?: string | null;
   initialSlots?: string | null;
   initialDates?: string | null;
   initialWeekdays?: string | null;
@@ -82,82 +82,58 @@ export default function ListingAvailabilityFields({
   initialEndTime?: string | null;
 }) {
   const availability = listingAvailabilityFromStorage({
+    mode: initialMode,
+    note: initialNote,
     slots: initialSlots,
     dates: initialDates,
-    weekdays:
-      initialWeekdays ?? DEFAULT_LISTING_AVAILABILITY.weekdays.join(","),
+    weekdays: initialWeekdays ?? DEFAULT_LISTING_AVAILABILITY.weekdays.join(","),
     startTime: initialStartTime ?? DEFAULT_LISTING_AVAILABILITY.startTime,
     endTime: initialEndTime ?? DEFAULT_LISTING_AVAILABILITY.endTime,
   });
   const calendarMonths = useMemo(() => buildCalendarMonths(today), [today]);
   const selectableDates = useMemo(
-    () =>
-      calendarMonths
-        .flatMap((month) => month.cells)
-        .filter(
-          (cell): cell is { date: string; day: number } =>
-            cell !== null && cell.date >= today,
-        )
-        .map((cell) => cell.date),
+    () => calendarMonths.flatMap((month) => month.cells)
+      .filter((cell): cell is { date: string; day: number } => cell !== null && cell.date >= today)
+      .map((cell) => cell.date),
     [calendarMonths, today],
   );
-  const [defaultStartTime, setDefaultStartTime] = useState(
-    availability.startTime,
-  );
+  const [mode, setMode] = useState<AvailabilityMode>(availability.mode);
+  const [note, setNote] = useState(availability.note ?? "");
+  const [activeMonth, setActiveMonth] = useState(0);
+  const [defaultStartTime, setDefaultStartTime] = useState(availability.startTime);
   const [defaultEndTime, setDefaultEndTime] = useState(availability.endTime);
-  const [selectedSlots, setSelectedSlots] = useState<
-    Record<string, AvailabilitySlot>
-  >(() => {
+  const [selectedSlots, setSelectedSlots] = useState<Record<string, AvailabilitySlot>>(() => {
     const allowed = new Set(selectableDates);
-    const storedSlots = parseAvailabilitySlots(initialSlots ?? null).filter(
-      (slot) => allowed.has(slot.date),
-    );
+    const storedSlots = parseAvailabilitySlots(initialSlots ?? null).filter((slot) => allowed.has(slot.date));
     if (storedSlots.length > 0) return slotsByDate(storedSlots);
 
-    const initialDatesList =
-      initialDates === undefined
-        ? []
-        : initialDates === null
-          ? datesForWeekdaysInCalendarWindow(availability.weekdays, today)
-          : parseAvailabilityDates(initialDates);
+    const initialDatesList = initialDates === undefined
+      ? []
+      : initialDates === null
+        ? datesForWeekdaysInCalendarWindow(availability.weekdays, today)
+        : parseAvailabilityDates(initialDates);
 
-    return slotsByDate(
-      initialDatesList
-        .filter((date) => allowed.has(date))
-        .map((date) => ({
-          date,
-          startTime: availability.startTime,
-          endTime: availability.endTime,
-        })),
-    );
+    return slotsByDate(initialDatesList
+      .filter((date) => allowed.has(date))
+      .map((date) => ({ date, startTime: availability.startTime, endTime: availability.endTime })));
   });
   const slots = useMemo(
-    () =>
-      Object.values(selectedSlots).sort((left, right) =>
-        left.date.localeCompare(right.date),
-      ),
+    () => Object.values(selectedSlots).sort((left, right) => left.date.localeCompare(right.date)),
     [selectedSlots],
   );
-  const selectedSet = useMemo(
-    () => new Set(Object.keys(selectedSlots)),
-    [selectedSlots],
-  );
+  const selectedSet = useMemo(() => new Set(Object.keys(selectedSlots)), [selectedSlots]);
   const earliestTime = slots.reduce(
-    (earliest, slot) =>
-      slot.startTime < earliest ? slot.startTime : earliest,
+    (earliest, slot) => slot.startTime < earliest ? slot.startTime : earliest,
     slots[0]?.startTime ?? defaultStartTime,
   );
   const latestTime = slots.reduce(
-    (latest, slot) => (slot.endTime > latest ? slot.endTime : latest),
+    (latest, slot) => slot.endTime > latest ? slot.endTime : latest,
     slots[0]?.endTime ?? defaultEndTime,
   );
+  const month = calendarMonths[activeMonth];
 
   function newSlot(date: string): AvailabilitySlot {
-    return {
-      date,
-      startTime: defaultStartTime,
-      endTime: defaultEndTime,
-    };
+    return { date, startTime: defaultStartTime, endTime: defaultEndTime };
   }
 
   function toggleDate(date: string) {
@@ -169,36 +145,12 @@ export default function ListingAvailabilityFields({
     });
   }
 
-  function toggleWeekday(weekday: number) {
-    const matchingDates = selectableDates.filter(
-      (date) => weekdayForIsoDate(date) === weekday,
-    );
-    const allSelected = matchingDates.every((date) => selectedSet.has(date));
-
-    setSelectedSlots((current) => {
-      const next = { ...current };
-      matchingDates.forEach((date) => {
-        if (allSelected) delete next[date];
-        else if (!next[date]) next[date] = newSlot(date);
-      });
-      return next;
-    });
-  }
-
-  function updateSlot(
-    date: string,
-    field: "startTime" | "endTime",
-    value: string,
-  ) {
+  function updateSlot(date: string, field: "startTime" | "endTime", value: string) {
     setSelectedSlots((current) => {
       const slot = current[date];
       if (!slot) return current;
-
       const nextSlot = { ...slot, [field]: value };
-      if (field === "startTime" && nextSlot.endTime <= value) {
-        nextSlot.endTime = addThirtyMinutes(value);
-      }
-
+      if (field === "startTime" && nextSlot.endTime <= value) nextSlot.endTime = addThirtyMinutes(value);
       return { ...current, [date]: nextSlot };
     });
   }
@@ -209,220 +161,122 @@ export default function ListingAvailabilityFields({
   }
 
   function applyDefaultHoursToAll() {
-    setSelectedSlots((current) =>
-      Object.fromEntries(
-        Object.keys(current).map((date) => [date, newSlot(date)]),
-      ),
-    );
+    setSelectedSlots((current) => Object.fromEntries(
+      Object.keys(current).map((date) => [date, newSlot(date)]),
+    ));
   }
 
   return (
-    <fieldset className="rounded-2xl border border-green-200 bg-green-50/60 p-4">
-      <legend className="px-2 text-base font-black text-green-800">
-        Kalendarz dostępnych terminów
-      </legend>
-      <p className="text-sm text-slate-600">
-        Zaznacz wolne daty w bieżącym miesiącu i dwóch kolejnych. Każdy dzień
-        może mieć inne godziny dostępności.
-      </p>
+    <fieldset className="rounded-2xl border border-green-200 bg-green-50/60 p-4 sm:p-5">
+      <legend className="px-2 text-base font-black text-green-800">Kalendarz dostępnych terminów</legend>
+      <p className="text-sm text-slate-600">Wybierz, jak chcesz udostępnić terminy.</p>
 
-      <input
-        type="hidden"
-        name="availability_slots"
-        value={JSON.stringify(slots)}
-      />
-      <input
-        type="hidden"
-        name="availability_dates"
-        value={slots.map((slot) => slot.date).join(",")}
-      />
-      <input
-        type="hidden"
-        name="availability_start_time"
-        value={earliestTime}
-      />
+      <input type="hidden" name="availability_mode" value={mode} />
+      <input type="hidden" name="availability_slots" value={mode === "specific" ? JSON.stringify(slots) : ""} />
+      <input type="hidden" name="availability_dates" value={mode === "specific" ? slots.map((slot) => slot.date).join(",") : ""} />
+      <input type="hidden" name="availability_start_time" value={earliestTime} />
       <input type="hidden" name="availability_end_time" value={latestTime} />
 
-      <div className="mt-4 rounded-2xl border border-green-200 bg-white p-4">
-        <p className="text-sm font-black text-slate-800">
-          Godziny dla nowych dat
-        </p>
-        <p className="mt-1 text-xs font-semibold text-slate-500">
-          Po zaznaczeniu daty możesz zmienić jej godziny osobno niżej.
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <label className="text-sm font-bold text-slate-700">
-            Od
-            <input
-              type="time"
-              step={1800}
-              max="23:00"
-              value={defaultStartTime}
-              onChange={(event) => updateDefaultStartTime(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3"
-            />
-          </label>
-          <label className="text-sm font-bold text-slate-700">
-            Do
-            <input
-              type="time"
-              step={1800}
-              min={addThirtyMinutes(defaultStartTime)}
-              value={defaultEndTime}
-              onChange={(event) => setDefaultEndTime(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3"
-            />
-          </label>
-          <button
-            type="button"
-            disabled={slots.length === 0}
-            onClick={applyDefaultHoursToAll}
-            className="col-span-2 rounded-xl border border-green-700 px-4 py-3 text-sm font-black text-green-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 sm:col-span-1 sm:self-end"
-          >
-            Zastosuj do wszystkich
-          </button>
-        </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          aria-pressed={mode === "specific"}
+          onClick={() => setMode("specific")}
+          className={`rounded-2xl border-2 p-4 text-left transition ${mode === "specific" ? "border-green-700 bg-white shadow-sm" : "border-slate-200 bg-white/70 hover:border-green-300"}`}
+        >
+          <span className="block font-black text-slate-900">📅 Konkretne terminy</span>
+          <span className="mt-1 block text-sm text-slate-600">Zaznaczasz dokładne dni i godziny dostępności.</span>
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "flexible"}
+          onClick={() => setMode("flexible")}
+          className={`rounded-2xl border-2 p-4 text-left transition ${mode === "flexible" ? "border-green-700 bg-white shadow-sm" : "border-slate-200 bg-white/70 hover:border-green-300"}`}
+        >
+          <span className="block font-black text-slate-900">💬 Dostępność do ustalenia</span>
+          <span className="mt-1 block text-sm text-slate-600">Zainteresowani napiszą do Ciebie, by ustalić termin.</span>
+        </button>
       </div>
 
-      <div className="mt-4">
-        <p className="text-sm font-black text-slate-700">
-          Szybko zaznacz wszystkie:
-        </p>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {WEEKDAY_OPTIONS.map((day) => {
-            const matchingDates = selectableDates.filter(
-              (date) => weekdayForIsoDate(date) === day.value,
-            );
-            const allSelected =
-              matchingDates.length > 0 &&
-              matchingDates.every((date) => selectedSet.has(date));
+      {mode === "flexible" ? (
+        <label className="mt-5 block font-bold text-slate-800">
+          Kiedy zwykle jesteś dostępny? <span className="font-normal text-slate-500">(opcjonalnie)</span>
+          <textarea
+            name="availability_note"
+            value={note}
+            maxLength={300}
+            rows={4}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Np. najczęściej w weekendy po południu; dokładny termin ustalimy w wiadomości."
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-4 font-normal"
+          />
+          <span className="mt-1 block text-right text-xs font-semibold text-slate-500">{note.length}/300</span>
+        </label>
+      ) : (
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-3">
+              <button type="button" disabled={activeMonth === 0} onClick={() => setActiveMonth((value) => Math.max(0, value - 1))} aria-label="Poprzedni miesiąc" className="h-10 w-10 rounded-xl border border-slate-200 text-xl font-black disabled:opacity-30">‹</button>
+              <h3 className="text-center text-lg font-black capitalize text-slate-900">{month.label}</h3>
+              <button type="button" disabled={activeMonth === calendarMonths.length - 1} onClick={() => setActiveMonth((value) => Math.min(calendarMonths.length - 1, value + 1))} aria-label="Następny miesiąc" className="h-10 w-10 rounded-xl border border-slate-200 text-xl font-black disabled:opacity-30">›</button>
+            </div>
 
-            return (
-              <label
-                key={day.value}
-                className="flex cursor-pointer items-center gap-2 rounded-xl border border-green-200 bg-white px-3 py-2 text-sm font-bold text-slate-700"
-              >
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={() => toggleWeekday(day.value)}
-                  className="h-4 w-4 accent-green-700"
-                />
-                {day.label}
-              </label>
-            );
-          })}
-        </div>
-      </div>
+            <div className="mt-4 grid grid-cols-7 gap-1 text-center">
+              {CALENDAR_WEEKDAYS.map((weekday) => <span key={weekday} className="py-2 text-xs font-black text-slate-500">{weekday}</span>)}
+              {month.cells.map((cell, index) => cell ? (
+                <button
+                  key={cell.date}
+                  type="button"
+                  disabled={cell.date < today}
+                  aria-current={cell.date === today ? "date" : undefined}
+                  aria-pressed={selectedSet.has(cell.date)}
+                  aria-label={`${selectedSet.has(cell.date) ? "Usuń" : "Dodaj"} termin ${cell.date}`}
+                  onClick={() => toggleDate(cell.date)}
+                  className={`aspect-square rounded-xl text-sm font-black transition ${selectedSet.has(cell.date) ? "bg-green-700 text-white shadow-sm" : cell.date < today ? "cursor-not-allowed bg-slate-100 text-slate-300" : cell.date === today ? "border-2 border-blue-400 bg-white text-slate-800" : "border border-slate-200 bg-white text-slate-700 hover:border-green-400 hover:bg-green-50"}`}
+                >{cell.day}</button>
+              ) : <span key={`${month.key}-empty-${index}`} />)}
+            </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        {calendarMonths.map((month) => (
-          <section
-            key={month.key}
-            aria-label={month.label}
-            className="rounded-2xl border border-slate-200 bg-white p-3"
-          >
-            <h3 className="text-center text-base font-black capitalize text-slate-900">
-              {month.label}
-            </h3>
-            <div className="mt-3 grid grid-cols-7 gap-1 text-center">
-              {CALENDAR_WEEKDAYS.map((weekday) => (
-                <span
-                  key={weekday}
-                  className="py-1 text-[11px] font-black text-slate-500"
-                >
-                  {weekday}
-                </span>
-              ))}
-              {month.cells.map((cell, index) =>
-                cell ? (
-                  <button
-                    key={cell.date}
-                    type="button"
-                    disabled={cell.date < today}
-                    aria-pressed={selectedSet.has(cell.date)}
-                    aria-label={`${selectedSet.has(cell.date) ? "Usuń" : "Dodaj"} termin ${cell.date}`}
-                    onClick={() => toggleDate(cell.date)}
-                    className={`aspect-square rounded-lg text-xs font-black transition ${
-                      selectedSet.has(cell.date)
-                        ? "bg-green-700 text-white shadow-sm"
-                        : cell.date < today
-                          ? "cursor-not-allowed bg-slate-100 text-slate-300"
-                          : "bg-slate-50 text-slate-700 hover:bg-green-100 hover:text-green-800"
-                    }`}
-                  >
-                    {cell.day}
-                  </button>
-                ) : (
-                  <span key={`${month.key}-empty-${index}`} />
-                ),
-              )}
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-slate-600">
+              <span><i className="mr-1 inline-block h-3 w-3 rounded bg-green-700" />Wybrany</span>
+              <span><i className="mr-1 inline-block h-3 w-3 rounded border-2 border-blue-400" />Dziś</span>
+              <span><i className="mr-1 inline-block h-3 w-3 rounded border border-slate-300 bg-white" />Dostępny</span>
+              <span><i className="mr-1 inline-block h-3 w-3 rounded bg-slate-100" />Miniony</span>
             </div>
           </section>
-        ))}
-      </div>
 
-      <p
-        aria-live="polite"
-        className={`mt-3 text-sm font-bold ${
-          slots.length > 0 ? "text-green-800" : "text-red-700"
-        }`}
-      >
-        {slots.length > 0
-          ? `Wybrano ${slots.length} terminów. Ustaw godziny dla każdego dnia.`
-          : "Zaznacz co najmniej jeden wolny termin."}
-      </p>
-
-      {slots.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <h3 className="text-base font-black text-slate-900">
-            Godziny w wybranych dniach
-          </h3>
-          {slots.map((slot) => (
-            <div
-              key={slot.date}
-              className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-[minmax(180px,1fr)_1fr_1fr_auto] sm:items-end"
-            >
-              <p className="font-black capitalize text-slate-900 sm:self-center">
-                {formatPolishIsoDate(slot.date)}
-              </p>
-              <label className="text-sm font-bold text-slate-700">
-                Od
-                <input
-                  type="time"
-                  step={1800}
-                  max="23:00"
-                  value={slot.startTime}
-                  onChange={(event) =>
-                    updateSlot(slot.date, "startTime", event.target.value)
-                  }
-                  required
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3"
-                />
+          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 className="text-lg font-black text-slate-900">Wybrane terminy ({slots.length})</h3>
+            <p className="mt-1 text-sm text-slate-500">Ustaw domyślne godziny lub zmień je osobno przy dacie.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <label className="text-sm font-bold text-slate-700">Od
+                <input type="time" step={1800} max="23:00" value={defaultStartTime} onChange={(event) => updateDefaultStartTime(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3" />
               </label>
-              <label className="text-sm font-bold text-slate-700">
-                Do
-                <input
-                  type="time"
-                  step={1800}
-                  min={addThirtyMinutes(slot.startTime)}
-                  value={slot.endTime}
-                  onChange={(event) =>
-                    updateSlot(slot.date, "endTime", event.target.value)
-                  }
-                  required
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3"
-                />
+              <label className="text-sm font-bold text-slate-700">Do
+                <input type="time" step={1800} min={addThirtyMinutes(defaultStartTime)} value={defaultEndTime} onChange={(event) => setDefaultEndTime(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3" />
               </label>
-              <button
-                type="button"
-                onClick={() => toggleDate(slot.date)}
-                className="rounded-xl border border-red-200 px-4 py-3 text-sm font-black text-red-700 hover:bg-red-50"
-              >
-                Usuń
-              </button>
+              <button type="button" disabled={slots.length === 0} onClick={applyDefaultHoursToAll} className="col-span-2 rounded-xl border border-green-700 px-3 py-3 text-sm font-black text-green-800 disabled:border-slate-200 disabled:text-slate-400 sm:col-span-1 sm:self-end">Zastosuj</button>
             </div>
-          ))}
+
+            {slots.length === 0 ? (
+              <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm font-bold text-slate-600">Zaznacz co najmniej jeden wolny termin w kalendarzu.</p>
+            ) : (
+              <div className="mt-4 max-h-[420px] space-y-3 overflow-auto pr-1">
+                {slots.map((slot) => (
+                  <div key={slot.date} className="rounded-xl border border-slate-200 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-black capitalize text-slate-900">{formatPolishIsoDate(slot.date)}</p>
+                      <button type="button" onClick={() => toggleDate(slot.date)} aria-label={`Usuń termin ${slot.date}`} className="h-8 w-8 rounded-lg text-xl font-bold text-slate-500 hover:bg-red-50 hover:text-red-700">×</button>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <input aria-label={`Godzina od ${slot.date}`} type="time" step={1800} max="23:00" value={slot.startTime} onChange={(event) => updateSlot(slot.date, "startTime", event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white p-2" />
+                      <input aria-label={`Godzina do ${slot.date}`} type="time" step={1800} min={addThirtyMinutes(slot.startTime)} value={slot.endTime} onChange={(event) => updateSlot(slot.date, "endTime", event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white p-2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       )}
     </fieldset>

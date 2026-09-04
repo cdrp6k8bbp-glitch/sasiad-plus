@@ -4,7 +4,7 @@ import AuthForm from "@/components/auth/AuthForm";
 export default async function LogowaniePage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirect?: string }>;
+  searchParams: Promise<{ redirect?: string; "email-potwierdzony"?: string }>;
 }) {
   const params = await searchParams;
   const redirectTo =
@@ -26,6 +26,15 @@ export default async function LogowaniePage({
         <p className="mt-4 leading-7 text-slate-600">
           Wróć do swoich ogłoszeń i sąsiedzkiej społeczności.
         </p>
+
+        {params["email-potwierdzony"] === "1" && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-800"
+          >
+            Adres e-mail został potwierdzony. Możesz się teraz zalogować.
+          </div>
+        )}
 
         <AuthForm mode="login" redirectTo={redirectTo} />
       </div>
