@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getListings } from "@/lib/db";
+import { GUIDES } from "@/lib/guides";
 import { absoluteUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,17 @@ const publicPages: MetadataRoute.Sitemap = [
     changeFrequency: "daily",
     priority: 0.8,
   },
+  {
+    url: absoluteUrl("/poradniki"),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  },
+  ...GUIDES.map((guide) => ({
+    url: absoluteUrl(`/poradniki/${guide.slug}`),
+    lastModified: new Date(guide.updatedAt),
+    changeFrequency: "monthly" as const,
+    priority: 0.65,
+  })),
   {
     url: absoluteUrl("/regulamin"),
     changeFrequency: "monthly",

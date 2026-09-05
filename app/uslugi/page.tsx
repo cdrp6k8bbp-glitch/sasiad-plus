@@ -36,6 +36,16 @@ export default function Uslugi({
           "pomoc przy przeprowadzce",
           "pomoc seniorom",
         ],
+        guides: [
+          {
+            href: "/poradniki/ile-kosztuje-opieka-nad-psem-podczas-urlopu",
+            title: "Ile kosztuje opieka nad psem podczas urlopu?",
+          },
+          {
+            href: "/poradniki/co-mozna-bezpiecznie-pozyczyc-od-sasiada",
+            title: "Co można bezpiecznie pożyczyć od sąsiada?",
+          },
+        ],
       }}
       title="Pomoc sąsiedzka"
     />

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GUIDES } from "@/lib/guides";
 import { priceAmountFromLabel } from "@/lib/seo";
 
 describe("dane SEO ogłoszeń", () => {
@@ -12,5 +13,21 @@ describe("dane SEO ogłoszeń", () => {
 
   it("pomija cenę do uzgodnienia", () => {
     expect(priceAmountFromLabel("do uzgodnienia")).toBeNull();
+  });
+});
+
+describe("poradniki SEO", () => {
+  it("udostępnia cztery poradniki z unikalnymi adresami", () => {
+    expect(GUIDES).toHaveLength(4);
+    expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
+  });
+
+  it("każdy poradnik ma opis, słowa kluczowe i pełną treść", () => {
+    for (const guide of GUIDES) {
+      expect(guide.description.length).toBeGreaterThan(80);
+      expect(guide.description.length).toBeLessThanOrEqual(160);
+      expect(guide.keywords.length).toBeGreaterThanOrEqual(3);
+      expect(guide.sections.length).toBeGreaterThanOrEqual(4);
+    }
   });
 });

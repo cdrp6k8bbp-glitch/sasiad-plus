@@ -36,6 +36,20 @@ export default function Sprzet({
           "odkurzacz przemysłowy",
           "osuszacz",
         ],
+        guides: [
+          {
+            href: "/poradniki/gdzie-wypozyczyc-narzedzia-w-slupsku",
+            title: "Gdzie wypożyczyć narzędzia w Słupsku?",
+          },
+          {
+            href: "/poradniki/jak-przygotowac-sprzet-do-wypozyczenia",
+            title: "Jak przygotować sprzęt do wypożyczenia?",
+          },
+          {
+            href: "/poradniki/co-mozna-bezpiecznie-pozyczyc-od-sasiada",
+            title: "Co można bezpiecznie pożyczyć od sąsiada?",
+          },
+        ],
       }}
       title="Wypożycz sprzęt"
     />

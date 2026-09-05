@@ -18,6 +18,10 @@ type CategoryListingsPageProps = {
     heading: string;
     paragraphs: readonly string[];
     searches: readonly string[];
+    guides?: readonly {
+      href: string;
+      title: string;
+    }[];
   };
   title: string;
 };
@@ -273,6 +277,23 @@ export default async function CategoryListingsPage({
                 ))}
               </div>
             </div>
+
+            {seoContent.guides && seoContent.guides.length > 0 && (
+              <div className="mt-8 border-t border-slate-100 pt-6">
+                <h3 className="font-black text-slate-900">Przeczytaj także</h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {seoContent.guides.map((guide) => (
+                    <Link
+                      key={guide.href}
+                      href={guide.href}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold transition hover:border-green-300 hover:bg-green-50 hover:text-green-800"
+                    >
+                      {guide.title} <span aria-hidden="true">→</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}

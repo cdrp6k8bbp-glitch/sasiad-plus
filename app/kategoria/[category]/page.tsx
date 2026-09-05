@@ -15,6 +15,12 @@ const categoryPages = {
         "Sprawdź opis usługi, dostępne terminy i lokalizację. Przed przekazaniem zwierzęcia ustal zasady opieki, karmienie, kontakt awaryjny oraz ewentualne potrzeby zdrowotne pupila.",
       ],
       searches: ["wyprowadzanie psa", "opieka nad psem", "opieka nad kotem", "opieka podczas urlopu"],
+      guides: [
+        {
+          href: "/poradniki/ile-kosztuje-opieka-nad-psem-podczas-urlopu",
+          title: "Ile kosztuje opieka nad psem podczas urlopu?",
+        },
+      ],
     },
   },
   dzieci: {
@@ -28,6 +34,12 @@ const categoryPages = {
         "Przed umówieniem opieki porozmawiaj z opiekunem, sprawdź informacje w profilu i dokładnie ustal godziny, obowiązki oraz zasady bezpieczeństwa.",
       ],
       searches: ["opieka wieczorna", "opieka weekendowa", "opieka okazjonalna", "opiekunka do dziecka"],
+      guides: [
+        {
+          href: "/poradniki/co-mozna-bezpiecznie-pozyczyc-od-sasiada",
+          title: "Jak bezpiecznie ustalać sąsiedzką pomoc?",
+        },
+      ],
     },
   },
   turystyka: {
@@ -41,6 +53,16 @@ const categoryPages = {
         "Wybierz interesujące ogłoszenie, sprawdź dostępność i skontaktuj się z właścicielem. Przed odbiorem ustal stan wyposażenia, zasady użytkowania, cenę oraz termin zwrotu.",
       ],
       searches: ["SUP", "kajak", "namiot", "rower", "kamper", "przyczepa kempingowa"],
+      guides: [
+        {
+          href: "/poradniki/jak-przygotowac-sprzet-do-wypozyczenia",
+          title: "Jak przygotować sprzęt do wypożyczenia?",
+        },
+        {
+          href: "/poradniki/co-mozna-bezpiecznie-pozyczyc-od-sasiada",
+          title: "Co można bezpiecznie pożyczyć od sąsiada?",
+        },
+      ],
     },
   },
   ogrod: {
@@ -54,6 +76,16 @@ const categoryPages = {
         "Wyszukaj urządzenie i miejscowość, a potem ustal z właścicielem termin odbioru. Przed użyciem zapytaj o instrukcję, paliwo lub zasilanie oraz zasady bezpiecznego zwrotu.",
       ],
       searches: ["kosiarka", "glebogryzarka", "wertykulator", "pilarka", "rozdrabniacz gałęzi"],
+      guides: [
+        {
+          href: "/poradniki/jak-przygotowac-sprzet-do-wypozyczenia",
+          title: "Jak przygotować sprzęt do wypożyczenia?",
+        },
+        {
+          href: "/poradniki/co-mozna-bezpiecznie-pozyczyc-od-sasiada",
+          title: "Co można bezpiecznie pożyczyć od sąsiada?",
+        },
+      ],
     },
   },
   dom: {
@@ -67,6 +99,16 @@ const categoryPages = {
         "Porównaj lokalne ogłoszenia, termin i cenę. Przed odbiorem ustal sposób używania urządzenia, dołączone akcesoria i warunki zwrotu.",
       ],
       searches: ["odkurzacz piorący", "osuszacz", "klimatyzator", "parownica", "projektor"],
+      guides: [
+        {
+          href: "/poradniki/jak-przygotowac-sprzet-do-wypozyczenia",
+          title: "Jak przygotować sprzęt do wypożyczenia?",
+        },
+        {
+          href: "/poradniki/co-mozna-bezpiecznie-pozyczyc-od-sasiada",
+          title: "Co można bezpiecznie pożyczyć od sąsiada?",
+        },
+      ],
     },
   },
 } as const;
