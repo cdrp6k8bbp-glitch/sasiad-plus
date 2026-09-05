@@ -5,9 +5,10 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import OwnerSummary from "@/components/OwnerSummary";
 import ListingGallery from "@/components/ListingGallery";
+import ListingCard from "@/components/ListingCard";
 import ReservationDateTimeFields from "@/components/ReservationDateTimeFields";
 import { auth } from "@/lib/auth";
-import { getListingById } from "@/lib/db";
+import { getListingById, getListings } from "@/lib/db";
 import { parseListingImageKeys } from "@/lib/listing-images";
 import { startConversation } from "@/app/wiadomosci/actions";
 import ListingOwnerActions from "@/components/ListingOwnerActions";
@@ -50,6 +51,14 @@ const categoryNames: Record<string, string> = {
 };
 
 const getListing = cache(getListingById);
+
+function categoryPath(category: string): string {
+  if (category === "sprzet") return "/sprzet";
+  if (category === "usluga" || category === "pomoc") return "/uslugi";
+  if (category === "rozwoj") return "/rozwoj-osobisty";
+
+  return `/kategoria/${category}`;
+}
 
 export async function generateMetadata({
   params,
@@ -136,12 +145,19 @@ export default async function ListingPage({
     notFound();
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  const [session, categoryListings] = await Promise.all([
+    auth.api.getSession({ headers: await headers() }),
+    getListings(listing.category, 5),
+  ]);
   const isOwner = session?.user.id === listing.owner_id;
   const isArchived = Boolean(listing.archived_at);
-  const isFavorite = session
-    ? (await getFavoriteListingIds(session.user.id)).includes(listing.id)
-    : false;
+  const favoriteIds = new Set(
+    session ? await getFavoriteListingIds(session.user.id) : [],
+  );
+  const isFavorite = favoriteIds.has(listing.id);
+  const relatedListings = categoryListings
+    .filter((item) => item.id !== listing.id)
+    .slice(0, 3);
   const activeReservations = session && !isOwner
     ? await getActiveReservationsForListingAndUser(
         listing.id,
@@ -189,15 +205,7 @@ export default async function ListingPage({
             "@type": "ListItem",
             position: 2,
             name: categoryNames[listing.category] ?? listing.category,
-            item: absoluteUrl(
-              listing.category === "sprzet"
-                ? "/sprzet"
-                : listing.category === "usluga" || listing.category === "pomoc"
-                  ? "/uslugi"
-                  : listing.category === "rozwoj"
-                    ? "/rozwoj-osobisty"
-                    : `/kategoria/${listing.category}`,
-            ),
+            item: absoluteUrl(categoryPath(listing.category)),
           },
           {
             "@type": "ListItem",
@@ -278,9 +286,25 @@ export default async function ListingPage({
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-        <Link href="/" className="font-semibold text-green-700 hover:underline">
-          ← Wróć
-        </Link>
+        <nav
+          aria-label="Okruszki nawigacyjne"
+          className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500"
+        >
+          <Link href="/" className="hover:text-green-700 hover:underline">
+            Strona główna
+          </Link>
+          <span aria-hidden="true">›</span>
+          <Link
+            href={categoryPath(listing.category)}
+            className="hover:text-green-700 hover:underline"
+          >
+            {categoryNames[listing.category] ?? listing.category}
+          </Link>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page" className="text-slate-700">
+            {listing.title}
+          </span>
+        </nav>
 
         {zapisano === "1" && (
           <p className="mt-6 rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
@@ -656,6 +680,44 @@ export default async function ListingPage({
             </div>
           </aside>
         </div>
+
+        {relatedListings.length > 0 && (
+          <section className="mt-14 border-t border-slate-200 pt-10">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="font-semibold text-green-700">Zobacz również</p>
+                <h2 className="mt-1 text-3xl font-black tracking-tight">
+                  Podobne ogłoszenia
+                </h2>
+              </div>
+              <Link
+                href={categoryPath(listing.category)}
+                className="font-bold text-green-700 hover:underline"
+              >
+                Wszystkie w tej kategorii →
+              </Link>
+            </div>
+
+            <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedListings.map((item) => (
+                <ListingCard
+                  key={item.id}
+                  id={item.id}
+                  icon={item.icon}
+                  imageKey={item.image_key}
+                  subcategory={item.subcategory}
+                  title={item.title}
+                  place={item.location}
+                  price={item.price}
+                  ownerName={item.owner_name}
+                  ownerId={item.owner_id}
+                  isFavorite={favoriteIds.has(item.id)}
+                  isReserved={Boolean(item.is_reserved)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
