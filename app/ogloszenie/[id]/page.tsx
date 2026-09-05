@@ -28,6 +28,7 @@ import {
   absoluteUrl,
   listingImageUrl,
   metadataDescription,
+  priceAmountFromLabel,
 } from "@/lib/seo";
 import {
   availableDatesForCalendar,
@@ -155,6 +156,81 @@ export default async function ListingPage({
     listing.image_keys,
     listing.image_key,
   );
+  const listingUrl = absoluteUrl(`/ogloszenie/${listing.id}`);
+  const listingImages = imageKeys.map(listingImageUrl);
+  const priceAmount = priceAmountFromLabel(listing.price);
+  const isProduct = ["sprzet", "turystyka", "ogrod", "dom"].includes(
+    listing.category,
+  );
+  const offer = priceAmount
+    ? {
+        "@type": "Offer",
+        url: listingUrl,
+        price: priceAmount,
+        priceCurrency: "PLN",
+        availability: isArchived
+          ? "https://schema.org/OutOfStock"
+          : "https://schema.org/InStock",
+      }
+    : undefined;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Sąsiad+",
+            item: absoluteUrl("/"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: categoryNames[listing.category] ?? listing.category,
+            item: absoluteUrl(
+              listing.category === "sprzet"
+                ? "/sprzet"
+                : listing.category === "usluga" || listing.category === "pomoc"
+                  ? "/uslugi"
+                  : listing.category === "rozwoj"
+                    ? "/rozwoj-osobisty"
+                    : `/kategoria/${listing.category}`,
+            ),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: listing.title,
+            item: listingUrl,
+          },
+        ],
+      },
+      isProduct
+        ? {
+            "@type": "Product",
+            "@id": `${listingUrl}#offer`,
+            name: listing.title,
+            description: metadataDescription(listing.description, 500),
+            category: categoryNames[listing.category] ?? listing.category,
+            image: listingImages.length > 0 ? listingImages : undefined,
+            sku: `sasiad-plus-${listing.id}`,
+            offers: offer,
+          }
+        : {
+            "@type": "Service",
+            "@id": `${listingUrl}#service`,
+            name: listing.title,
+            description: metadataDescription(listing.description, 500),
+            serviceType: categoryNames[listing.category] ?? listing.category,
+            areaServed: listing.location,
+            image: listingImages.length > 0 ? listingImages : undefined,
+            url: listingUrl,
+            offers: offer,
+          },
+    ],
+  };
   const ownerReviewSummary = listing.owner_id
     ? await getReviewSummary(listing.owner_id)
     : null;
@@ -180,6 +256,12 @@ export default async function ListingPage({
 
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
           <Link href="/" className="text-2xl font-black text-green-700">

@@ -25,3 +25,18 @@ export function metadataDescription(value: string, maxLength = 160): string {
 
   return `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
 }
+
+export function priceAmountFromLabel(value: string): string | null {
+  const match = value
+    .replace(/\s/g, "")
+    .replace(",", ".")
+    .match(/\d+(?:\.\d{1,2})?/);
+
+  if (!match) {
+    return null;
+  }
+
+  const amount = Number(match[0]);
+
+  return Number.isFinite(amount) ? amount.toFixed(2) : null;
+}
