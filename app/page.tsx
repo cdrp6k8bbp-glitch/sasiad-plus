@@ -6,6 +6,7 @@ import ListingCard from "@/components/ListingCard";
 import { auth } from "@/lib/auth";
 import { CATEGORIES, isCategoryKey } from "@/lib/categories";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
+import { GUIDES } from "@/lib/guides";
 
 export const metadata: Metadata = {
   title: {
@@ -89,6 +90,8 @@ const categories = [
     href: "/rozwoj-osobisty",
   },
 ];
+
+const featuredGuides = GUIDES.slice(0, 3);
 
 export default async function Home({
   searchParams,
@@ -326,6 +329,71 @@ export default async function Home({
           ))}
         </div>
       </section>
+
+      {!isSearching && (
+        <section className="mx-auto max-w-7xl px-4 py-14 md:px-8">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <p className="font-semibold text-green-700">
+                Praktycznie i po sąsiedzku
+              </p>
+              <h2 className="mt-1 text-3xl font-black tracking-tight">
+                Poradniki Sąsiad+
+              </h2>
+              <p className="mt-3 max-w-2xl leading-7 text-slate-600">
+                Sprawdź, jak bezpiecznie wypożyczać rzeczy, przygotować sprzęt
+                i dobrze ustalić zasady opieki.
+              </p>
+            </div>
+            <Link
+              href="/poradniki"
+              className="hidden font-semibold text-green-700 hover:underline sm:block"
+            >
+              Wszystkie poradniki →
+            </Link>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {featuredGuides.map((guide) => (
+              <article
+                key={guide.slug}
+                className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-green-300 hover:shadow-lg"
+              >
+                <span className="text-4xl" aria-hidden="true">
+                  {guide.icon}
+                </span>
+                <p className="mt-5 text-sm font-bold text-green-700">
+                  {guide.readingTime}
+                </p>
+                <h3 className="mt-2 text-xl font-black leading-7 tracking-tight">
+                  <Link
+                    className="transition hover:text-green-700"
+                    href={`/poradniki/${guide.slug}`}
+                  >
+                    {guide.cardTitle}
+                  </Link>
+                </h3>
+                <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">
+                  {guide.description}
+                </p>
+                <Link
+                  className="mt-6 font-black text-green-700 hover:underline"
+                  href={`/poradniki/${guide.slug}`}
+                >
+                  Czytaj poradnik →
+                </Link>
+              </article>
+            ))}
+          </div>
+
+          <Link
+            href="/poradniki"
+            className="mt-6 inline-flex font-semibold text-green-700 hover:underline sm:hidden"
+          >
+            Wszystkie poradniki →
+          </Link>
+        </section>
+      )}
 
       <section className="mx-auto max-w-7xl px-4 py-14 md:px-8">
         <div className="mb-8 flex items-end justify-between gap-4">
