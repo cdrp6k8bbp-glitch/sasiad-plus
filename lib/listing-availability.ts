@@ -15,6 +15,7 @@ export type AvailabilitySlot = {
 };
 
 export type AvailabilityMode = "specific" | "flexible";
+export type ListingAvailabilityState = "available" | "flexible" | "expired";
 
 export type ListingAvailability = {
   mode: AvailabilityMode;
@@ -238,6 +239,42 @@ export function availableDatesForCalendar(
   }
 
   return datesForWeekdaysInCalendarWindow(availability.weekdays, today);
+}
+
+export function listingAvailabilityState(
+  availability: ListingAvailability,
+  today = todayIsoInPoland(),
+): ListingAvailabilityState {
+  if (availability.mode === "flexible") return "flexible";
+  return availableDatesForCalendar(availability, today).length > 0
+    ? "available"
+    : "expired";
+}
+
+export function listingAvailabilityStateFromRecord(
+  listing: {
+    availability_mode?: string | null;
+    availability_note?: string | null;
+    availability_slots?: string | null;
+    availability_dates?: string | null;
+    availability_weekdays: string | null;
+    availability_start_time: string | null;
+    availability_end_time: string | null;
+  },
+  today = todayIsoInPoland(),
+): ListingAvailabilityState {
+  return listingAvailabilityState(
+    listingAvailabilityFromStorage({
+      mode: listing.availability_mode,
+      note: listing.availability_note,
+      slots: listing.availability_slots,
+      dates: listing.availability_dates,
+      weekdays: listing.availability_weekdays,
+      startTime: listing.availability_start_time,
+      endTime: listing.availability_end_time,
+    }),
+    today,
+  );
 }
 
 export function readListingAvailability(
@@ -545,20 +582,24 @@ export function formatPolishIsoDate(value: string): string {
 
 export function formatListingAvailability(
   availability: ListingAvailability,
+  today?: string,
 ): string {
   if (availability.mode === "flexible") {
     return availability.note || "Termin do ustalenia z właścicielem.";
   }
 
   if (availability.slots !== null) {
-    if (availability.slots.length === 0) {
+    const slots = today
+      ? availability.slots.filter((slot) => slot.date >= today)
+      : availability.slots;
+    if (slots.length === 0) {
       return "Brak przyszłych terminów";
     }
 
-    const firstSlot = availability.slots[0];
-    const lastSlot = availability.slots.at(-1) ?? firstSlot;
+    const firstSlot = slots[0];
+    const lastSlot = slots.at(-1) ?? firstSlot;
     const timeRanges = new Set(
-      availability.slots.map(
+      slots.map(
         (slot) => `${slot.startTime}–${slot.endTime}`,
       ),
     );
@@ -567,17 +608,20 @@ export function formatListingAvailability(
         ? [...timeRanges][0]
         : "różne godziny dla poszczególnych dni";
 
-    return `${availability.slots.length} wybranych terminów · ${formatPolishIsoDate(firstSlot.date)} – ${formatPolishIsoDate(lastSlot.date)} · ${hours}`;
+    return `${slots.length} wybranych terminów · ${formatPolishIsoDate(firstSlot.date)} – ${formatPolishIsoDate(lastSlot.date)} · ${hours}`;
   }
 
   if (availability.dates !== null) {
-    if (availability.dates.length === 0) {
+    const dates = today
+      ? availability.dates.filter((date) => date >= today)
+      : availability.dates;
+    if (dates.length === 0) {
       return "Brak przyszłych terminów";
     }
 
-    const firstDate = availability.dates[0];
-    const lastDate = availability.dates.at(-1) ?? firstDate;
-    return `${availability.dates.length} wybranych terminów · ${formatPolishIsoDate(firstDate)} – ${formatPolishIsoDate(lastDate)} · ${availability.startTime}–${availability.endTime}`;
+    const firstDate = dates[0];
+    const lastDate = dates.at(-1) ?? firstDate;
+    return `${dates.length} wybranych terminów · ${formatPolishIsoDate(firstDate)} – ${formatPolishIsoDate(lastDate)} · ${availability.startTime}–${availability.endTime}`;
   }
 
   const labels = WEEKDAY_OPTIONS.filter((day) =>

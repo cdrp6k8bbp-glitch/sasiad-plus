@@ -4,6 +4,7 @@ import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import { auth } from "@/lib/auth";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
+import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
 
 type CategoryListingsPageProps = {
   categories: string | string[];
@@ -242,6 +243,7 @@ export default async function CategoryListingsPage({
                 ownerId={listing.owner_id}
                 isFavorite={favoriteIds.has(listing.id)}
                 isReserved={Boolean(listing.is_reserved)}
+                availabilityState={listingAvailabilityStateFromRecord(listing)}
               />
             ))}
           </div>

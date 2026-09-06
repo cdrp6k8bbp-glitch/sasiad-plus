@@ -6,6 +6,7 @@ import ListingCard from "@/components/ListingCard";
 import { auth } from "@/lib/auth";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
 import { absoluteUrl } from "@/lib/seo";
+import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
 
 export const metadata: Metadata = {
   title: "Wypożyczalnia sprzętu i pomoc sąsiedzka w Słupsku",
@@ -231,6 +232,7 @@ export default async function SlupskPage() {
                 ownerId={listing.owner_id}
                 isFavorite={favoriteIds.has(listing.id)}
                 isReserved={Boolean(listing.is_reserved)}
+                availabilityState={listingAvailabilityStateFromRecord(listing)}
               />
             ))}
           </div>

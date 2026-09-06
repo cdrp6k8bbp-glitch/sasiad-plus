@@ -34,6 +34,14 @@ type OperationalAlertEmail = {
   actionUrl: string;
 };
 
+type ListingFreshnessEmail = {
+  apiKey: string;
+  db: D1Database;
+  recipient: string;
+  listingTitle: string;
+  actionUrl: string;
+};
+
 type EmailPayload = {
   from: string;
   to: string[];
@@ -286,6 +294,49 @@ export async function sendOperationalAlertEmail({
         </div>
       `,
       tags: [{ name: "category", value: "operations_alert" }],
+    },
+  });
+}
+
+export async function sendListingFreshnessEmail({
+  apiKey,
+  db,
+  recipient,
+  listingTitle,
+  actionUrl,
+}: ListingFreshnessEmail) {
+  const safeTitle = escapeHtml(listingTitle);
+  const safeActionUrl = escapeHtml(actionUrl);
+
+  await sendEmail({
+    apiKey,
+    db,
+    kind: "listing_freshness_reminder",
+    failureEvent: "listing_freshness_email_failed",
+    failureMessage: "Nie udało się wysłać przypomnienia o ogłoszeniu.",
+    payload: {
+      from: "Sąsiad+ <noreply@sasiad-plus.com>",
+      to: [recipient],
+      subject: "Potwierdź aktualność ogłoszenia w Sąsiad+",
+      text: [
+        `Czy oferta „${listingTitle}” jest nadal aktualna?`,
+        "",
+        "Potwierdź ją jednym kliknięciem. Jeśli nic nie zrobisz, po 60 dniach bez potwierdzenia ogłoszenie trafi do archiwum.",
+        "",
+        `Otwórz ogłoszenie: ${actionUrl}`,
+      ].join("\n"),
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6; max-width: 560px; margin: 0 auto;">
+          <p style="font-size: 22px; font-weight: 800; color: #15803d;">Sąsiad+</p>
+          <h1 style="font-size: 28px; line-height: 1.2;">Czy ogłoszenie jest nadal aktualne?</h1>
+          <p>Potwierdź aktualność oferty <strong>„${safeTitle}”</strong>. Zajmie to jedno kliknięcie.</p>
+          <p style="margin: 28px 0;">
+            <a href="${safeActionUrl}" style="display: inline-block; border-radius: 14px; background: #15803d; color: #ffffff; padding: 14px 22px; font-weight: 700; text-decoration: none;">Potwierdź aktualność</a>
+          </p>
+          <p style="color: #64748b;">Po 60 dniach bez potwierdzenia ogłoszenie zostanie automatycznie przeniesione do archiwum.</p>
+        </div>
+      `,
+      tags: [{ name: "category", value: "listing_freshness" }],
     },
   });
 }

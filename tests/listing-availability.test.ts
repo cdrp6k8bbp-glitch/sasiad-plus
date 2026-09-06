@@ -3,8 +3,10 @@ import {
   availableDatesForCalendar,
   calendarWindowForIsoDate,
   datesForWeekdaysInCalendarWindow,
+  formatListingAvailability,
   isReservationWithinAvailability,
   listingAvailabilityFromStorage,
+  listingAvailabilityState,
   readListingAvailability,
   type ListingAvailability,
 } from "@/lib/listing-availability";
@@ -150,5 +152,33 @@ describe("kalendarz dostępności ogłoszenia", () => {
 
     expect(availability.mode).toBe("specific");
     expect(availability.slots).toHaveLength(1);
+  });
+
+  test("ukrywa minione terminy i zmienia status na zapytanie o dostępność", () => {
+    const availability: ListingAvailability = {
+      mode: "specific",
+      note: null,
+      slots: [
+        { date: "2026-08-24", startTime: "09:00", endTime: "17:00" },
+        { date: "2026-09-10", startTime: "16:00", endTime: "20:00" },
+      ],
+      dates: ["2026-08-24", "2026-09-10"],
+      weekdays: [1, 4],
+      startTime: "09:00",
+      endTime: "20:00",
+    };
+
+    expect(formatListingAvailability(availability, "2026-09-06")).not.toContain(
+      "24 sierpnia",
+    );
+    expect(formatListingAvailability(availability, "2026-09-06")).toContain(
+      "10 września",
+    );
+    expect(listingAvailabilityState(availability, "2026-09-06")).toBe(
+      "available",
+    );
+    expect(listingAvailabilityState(availability, "2026-09-11")).toBe(
+      "expired",
+    );
   });
 });

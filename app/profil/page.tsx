@@ -20,6 +20,7 @@ import {
 import { getUserProfileDetails } from "@/lib/profiles";
 import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
 import { isCurrentUserAdmin } from "@/lib/admin";
+import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
 
 export default async function ProfilPage({
   searchParams,
@@ -30,6 +31,7 @@ export default async function ProfilPage({
     oceniono?: string;
     zapisano?: string;
     rezerwacja?: string;
+    potwierdzono?: string;
   }>;
 }) {
   const {
@@ -38,6 +40,7 @@ export default async function ProfilPage({
     oceniono,
     zapisano,
     rezerwacja,
+    potwierdzono,
   } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -111,6 +114,12 @@ export default async function ProfilPage({
         {przywrocono === "1" && (
           <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
             ✓ Ogłoszenie zostało przywrócone.
+          </p>
+        )}
+
+        {potwierdzono === "1" && (
+          <p className="rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Aktualność ogłoszenia została potwierdzona na kolejne 60 dni.
           </p>
         )}
 
@@ -215,6 +224,7 @@ export default async function ProfilPage({
                     showFavorite={false}
                     isReserved={Boolean(listing.is_reserved)}
                     isArchived={Boolean(listing.archived_at)}
+                    availabilityState={listingAvailabilityStateFromRecord(listing)}
                   />
                   <ListingOwnerActions
                     listingId={listing.id}
@@ -275,6 +285,7 @@ export default async function ProfilPage({
                   ownerId={listing.owner_id}
                   isFavorite
                   isReserved={Boolean(listing.is_reserved)}
+                  availabilityState={listingAvailabilityStateFromRecord(listing)}
                 />
               ))}
             </div>

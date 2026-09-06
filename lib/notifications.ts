@@ -7,7 +7,9 @@ export type NotificationType =
   | "reservation_cancelled"
   | "reservation_completed"
   | "review_received"
-  | "moderation_update";
+  | "moderation_update"
+  | "listing_freshness_reminder"
+  | "listing_archived";
 
 export type Notification = {
   id: number;

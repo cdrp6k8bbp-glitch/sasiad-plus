@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { CATEGORIES, isCategoryKey } from "@/lib/categories";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
 import { GUIDES } from "@/lib/guides";
+import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
 
 export const metadata: Metadata = {
   title: {
@@ -468,6 +469,7 @@ export default async function Home({
                 ownerId={listing.owner_id}
                 isFavorite={favoriteIds.has(listing.id)}
                 isReserved={Boolean(listing.is_reserved)}
+                availabilityState={listingAvailabilityStateFromRecord(listing)}
               />
             ))}
           </div>

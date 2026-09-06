@@ -21,6 +21,7 @@ import {
 import { getUserProfileDetails } from "@/lib/profiles";
 import { getTrustLevel, getUserTrustStats } from "@/lib/trust";
 import { getUserBlockState } from "@/lib/user-blocks";
+import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
 
 function initials(name: string): string {
   return name
@@ -258,6 +259,7 @@ export default async function PublicProfilePage({
                   ownerName={listing.owner_name}
                   isFavorite={favoriteIds.has(listing.id)}
                   isReserved={Boolean(listing.is_reserved)}
+                  availabilityState={listingAvailabilityStateFromRecord(listing)}
                 />
               ))}
             </div>

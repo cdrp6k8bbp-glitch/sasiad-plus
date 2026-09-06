@@ -130,8 +130,9 @@ export async function addListing(formData: FormData): Promise<void> {
         availability_dates,
         availability_weekdays,
         availability_start_time,
-        availability_end_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        availability_end_time,
+        freshness_confirmed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     )
       .bind(
         title,

@@ -32,9 +32,10 @@ import {
   priceAmountFromLabel,
 } from "@/lib/seo";
 import {
-  availableDatesForCalendar,
   formatListingAvailability,
   listingAvailabilityFromStorage,
+  listingAvailabilityState,
+  listingAvailabilityStateFromRecord,
   todayIsoInPoland,
 } from "@/lib/listing-availability";
 
@@ -128,11 +129,12 @@ export default async function ListingPage({
   searchParams: Promise<{
     zapisano?: string;
     rezerwacja?: string;
+    aktualne?: string;
     zgloszono?: string;
   }>;
 }) {
   const { id } = await params;
-  const { zapisano, rezerwacja, zgloszono } = await searchParams;
+  const { zapisano, rezerwacja, zgloszono, aktualne } = await searchParams;
   const listingId = Number(id);
 
   if (!Number.isInteger(listingId) || listingId < 1) {
@@ -151,6 +153,18 @@ export default async function ListingPage({
   ]);
   const isOwner = session?.user.id === listing.owner_id;
   const isArchived = Boolean(listing.archived_at);
+  const availability = listingAvailabilityFromStorage({
+    mode: listing.availability_mode,
+    note: listing.availability_note,
+    slots: listing.availability_slots,
+    dates: listing.availability_dates,
+    weekdays: listing.availability_weekdays,
+    startTime: listing.availability_start_time,
+    endTime: listing.availability_end_time,
+  });
+  const today = todayIsoInPoland();
+  const availabilityState = listingAvailabilityState(availability, today);
+  const hasAvailableDates = availabilityState === "available";
   const favoriteIds = new Set(
     session ? await getFavoriteListingIds(session.user.id) : [],
   );
@@ -184,7 +198,7 @@ export default async function ListingPage({
         url: listingUrl,
         price: priceAmount,
         priceCurrency: "PLN",
-        availability: isArchived
+        availability: isArchived || availabilityState === "expired"
           ? "https://schema.org/OutOfStock"
           : "https://schema.org/InStock",
       }
@@ -249,19 +263,6 @@ export default async function ListingPage({
   const contactBlocked = Boolean(
     blockState?.blockedByViewer || blockState?.viewerBlockedByUser,
   );
-  const availability = listingAvailabilityFromStorage({
-    mode: listing.availability_mode,
-    note: listing.availability_note,
-    slots: listing.availability_slots,
-    dates: listing.availability_dates,
-    weekdays: listing.availability_weekdays,
-    startTime: listing.availability_start_time,
-    endTime: listing.availability_end_time,
-  });
-  const today = todayIsoInPoland();
-  const hasAvailableDates =
-    availableDatesForCalendar(availability, today).length > 0;
-
   return (
     <main className="min-h-screen bg-[#f7faf8] text-slate-900">
       <script
@@ -309,6 +310,12 @@ export default async function ListingPage({
         {zapisano === "1" && (
           <p className="mt-6 rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
             ✓ Zmiany w ogłoszeniu zostały zapisane.
+          </p>
+        )}
+
+        {aktualne === "1" && (
+          <p className="mt-6 rounded-2xl bg-green-100 px-5 py-4 font-bold text-green-800">
+            ✓ Aktualność ogłoszenia została potwierdzona na kolejne 60 dni.
           </p>
         )}
 
@@ -383,6 +390,8 @@ export default async function ListingPage({
                     ? "bg-slate-100 text-slate-700"
                     : isOwner
                     ? "bg-blue-50 text-blue-800"
+                    : availabilityState === "expired"
+                    ? "bg-amber-50 text-amber-900"
                     : listing.is_reserved
                     ? "bg-amber-50 text-amber-800"
                     : "bg-green-50 text-green-800"
@@ -393,6 +402,8 @@ export default async function ListingPage({
                     ? "📦 Ogłoszenie zarchiwizowane"
                     : isOwner
                     ? "👤 To Twoje ogłoszenie"
+                    : availabilityState === "expired"
+                    ? "💬 Zapytaj o dostępność"
                     : listing.is_reserved
                     ? "📅 Niektóre terminy są zarezerwowane"
                     : "🟢 Dostępne"}
@@ -402,24 +413,30 @@ export default async function ListingPage({
                     ? "Właściciel może je ponownie przywrócić."
                     : isOwner
                     ? "Prośby o rezerwację znajdziesz w swoim profilu."
-                    : availability.mode === "flexible"
+                    : availabilityState === "flexible" || availabilityState === "expired"
                     ? "Napisz do właściciela i wspólnie ustalcie dogodny termin."
                     : "Wybierz termin i wyślij prośbę do właściciela."}
                 </p>
               </div>
 
               {!isArchived && listing.owner_id && (
-                <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-900">
+                <div className={`mt-4 rounded-2xl border p-4 ${
+                  availabilityState === "expired"
+                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                    : "border-green-200 bg-green-50 text-green-900"
+                }`}>
                   <p className="text-sm font-black">
-                    {availability.mode === "flexible"
+                    {availabilityState === "flexible"
                       ? "💬 Termin do ustalenia"
+                      : availabilityState === "expired"
+                      ? "💬 Brak aktualnych terminów"
                       : "🗓️ Dostępne terminy"}
                   </p>
                   <p className="mt-1 text-sm font-semibold">
-                    {formatListingAvailability(availability)}
+                    {formatListingAvailability(availability, today)}
                   </p>
                   <p className="mt-1 text-xs text-green-800">
-                    {availability.mode === "flexible"
+                    {availabilityState === "flexible" || availabilityState === "expired"
                       ? "Wyślij wiadomość, aby uzgodnić konkretny dzień i godzinę."
                       : "Rezerwacja może rozpocząć i zakończyć się tylko w tych dniach i godzinach."}
                   </p>
@@ -448,7 +465,7 @@ export default async function ListingPage({
                   href={`/logowanie?redirect=/ogloszenie/${listing.id}`}
                   className="mt-6 flex w-full items-center justify-center rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
                 >
-                  {availability.mode === "flexible"
+                  {availabilityState !== "available"
                     ? "Zaloguj się, aby zapytać o dostępność"
                     : "Zaloguj się, aby napisać"}
                 </Link>
@@ -459,7 +476,7 @@ export default async function ListingPage({
                     type="submit"
                     className="mt-6 w-full rounded-2xl bg-green-700 px-6 py-4 font-bold text-white hover:bg-green-800"
                   >
-                    {availability.mode === "flexible"
+                    {availabilityState !== "available"
                       ? "Zapytaj o dostępność"
                       : "Napisz do właściciela"}
                   </button>
@@ -478,7 +495,8 @@ export default async function ListingPage({
                 !isOwner &&
                 !isArchived &&
                 !contactBlocked &&
-                availability.mode === "specific" && (
+                availability.mode === "specific" &&
+                hasAvailableDates && (
                 <div className="mt-6 border-t border-slate-200 pt-6">
                   <h2 className="text-xl font-black">Zarezerwuj termin</h2>
 
@@ -713,6 +731,7 @@ export default async function ListingPage({
                   ownerId={item.owner_id}
                   isFavorite={favoriteIds.has(item.id)}
                   isReserved={Boolean(item.is_reserved)}
+                  availabilityState={listingAvailabilityStateFromRecord(item)}
                 />
               ))}
             </div>

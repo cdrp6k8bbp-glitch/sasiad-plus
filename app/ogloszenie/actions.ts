@@ -172,7 +172,9 @@ export async function updateListing(
            availability_dates = ?,
            availability_weekdays = ?,
            availability_start_time = ?,
-           availability_end_time = ?
+           availability_end_time = ?,
+           freshness_confirmed_at = datetime('now'),
+           freshness_reminded_at = NULL
        WHERE id = ? AND owner_id = ?`,
     )
       .bind(
@@ -268,7 +270,9 @@ export async function restoreListing(formData: FormData): Promise<void> {
   const { env } = await getCloudflareContext({ async: true });
   const result = await env.DB.prepare(
     `UPDATE listings
-     SET archived_at = NULL
+     SET archived_at = NULL,
+         freshness_confirmed_at = datetime('now'),
+         freshness_reminded_at = NULL
      WHERE id = ? AND owner_id = ? AND archived_at IS NOT NULL`,
   )
     .bind(listingId, session.user.id)
@@ -280,4 +284,39 @@ export async function restoreListing(formData: FormData): Promise<void> {
 
   revalidateListingPages(listingId);
   redirect("/profil?przywrocono=1");
+}
+
+export async function confirmListingFreshness(
+  formData: FormData,
+): Promise<void> {
+  const listingId = positiveInteger(formData.get("listing_id"));
+  const returnTo = formData.get("return_to");
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session) {
+    redirect(`/logowanie?redirect=/ogloszenie/${listingId ?? ""}`);
+  }
+
+  if (!listingId) throw new Error("Nieprawidłowe ogłoszenie.");
+
+  const { env } = await getCloudflareContext({ async: true });
+  const result = await env.DB.prepare(
+    `UPDATE listings
+     SET freshness_confirmed_at = datetime('now'),
+         freshness_reminded_at = NULL
+     WHERE id = ? AND owner_id = ? AND archived_at IS NULL`,
+  )
+    .bind(listingId, session.user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    throw new Error("Nie udało się potwierdzić aktualności ogłoszenia.");
+  }
+
+  revalidateListingPages(listingId);
+  redirect(
+    returnTo === "profile"
+      ? "/profil?potwierdzono=1#ogloszenia"
+      : `/ogloszenie/${listingId}?aktualne=1`,
+  );
 }

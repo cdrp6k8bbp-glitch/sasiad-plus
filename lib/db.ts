@@ -22,6 +22,8 @@ export type Listing = {
   availability_start_time: string;
   availability_end_time: string;
   archived_at: string | null;
+  freshness_confirmed_at: string | null;
+  freshness_reminded_at: string | null;
   created_at: string;
 };
 
@@ -45,6 +47,8 @@ const LISTING_COLUMNS = `
   listings.availability_start_time,
   listings.availability_end_time,
   listings.archived_at,
+  listings.freshness_confirmed_at,
+  listings.freshness_reminded_at,
   listings.created_at,
   EXISTS (
     SELECT 1

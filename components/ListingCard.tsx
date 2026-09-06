@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import OwnerSummary from "@/components/OwnerSummary";
 import FavoriteButton from "@/components/FavoriteButton";
+import type { ListingAvailabilityState } from "@/lib/listing-availability";
 
 type ListingProps = {
   id: number;
@@ -17,6 +18,7 @@ type ListingProps = {
   showFavorite?: boolean;
   isReserved?: boolean;
   isArchived?: boolean;
+  availabilityState?: ListingAvailabilityState;
 };
 
 function imageUrl(imageKey: string): string {
@@ -40,7 +42,18 @@ export default function ListingCard({
   showFavorite = true,
   isReserved = false,
   isArchived = false,
+  availabilityState = "available",
 }: ListingProps) {
+  const status = isArchived
+    ? { label: "📦 W archiwum", className: "text-slate-700" }
+    : availabilityState === "expired"
+      ? { label: "💬 Zapytaj o dostępność", className: "text-amber-700" }
+      : isReserved
+        ? { label: "📅 Ma rezerwację", className: "text-amber-700" }
+        : availabilityState === "flexible"
+          ? { label: "💬 Termin do ustalenia", className: "text-blue-700" }
+          : { label: "Dostępne", className: "text-green-700" };
+
   return (
     <article
       className={`group overflow-hidden rounded-3xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
@@ -70,19 +83,9 @@ export default function ListingCard({
         )}
 
         <span
-          className={`absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1 text-xs font-bold shadow ${
-            isArchived
-              ? "text-slate-700"
-              : isReserved
-                ? "text-amber-700"
-                : "text-green-700"
-          }`}
+          className={`absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1 text-xs font-bold shadow ${status.className}`}
         >
-          {isArchived
-            ? "📦 W archiwum"
-            : isReserved
-              ? "📅 Ma rezerwację"
-              : "Dostępne"}
+          {status.label}
         </span>
       </div>
 
