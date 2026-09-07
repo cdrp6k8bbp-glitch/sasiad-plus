@@ -9,7 +9,8 @@ export type NotificationType =
   | "review_received"
   | "moderation_update"
   | "listing_freshness_reminder"
-  | "listing_archived";
+  | "listing_archived"
+  | "search_match";
 
 export type Notification = {
   id: number;

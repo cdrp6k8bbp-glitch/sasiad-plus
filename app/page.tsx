@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
 import LocationSearchField from "@/components/LocationSearchField";
+import EmptySearchState from "@/components/EmptySearchState";
 import { auth } from "@/lib/auth";
 import { CATEGORIES, isCategoryKey } from "@/lib/categories";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
@@ -105,6 +106,7 @@ export default async function Home({
     q?: string;
     location?: string;
     radius?: string;
+    alert?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -142,6 +144,8 @@ export default async function Home({
       return matchesQuery && matchesLocation;
     })
     .slice(0, q || locationValue ? 100 : 6);
+  const similarListings =
+    isSearching && listings.length === 0 ? allListings.slice(0, 3) : [];
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-24 text-slate-900 md:pb-0">
@@ -435,28 +439,24 @@ export default async function Home({
         </div>
 
         {listings.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
-            <div className="text-5xl">📦</div>
-
-            <h3 className="mt-4 text-xl font-bold">
-              {isSearching
-                ? "Nie znaleziono pasujących ogłoszeń"
-                : "Nie ma jeszcze ogłoszeń"}
-            </h3>
-
-            <p className="mt-2 text-slate-600">
-              {isSearching
-                ? "Spróbuj użyć krótszej nazwy albo innego miasta."
-                : "Dodaj pierwsze ogłoszenie i pokaż sąsiadom, co oferujesz."}
-            </p>
-
-            <Link
-              href={isSearching ? "/" : "/dodaj"}
-              className="mt-6 inline-flex rounded-full bg-green-700 px-6 py-3 font-semibold text-white hover:bg-green-800"
-            >
-              {isSearching ? "Wyczyść wyszukiwanie" : "Dodaj ogłoszenie"}
-            </Link>
-          </div>
+          isSearching ? (
+            <EmptySearchState
+              alertSaved={params.alert === "1"}
+              favoriteIds={favoriteIds}
+              location={locationValue}
+              pathname="/"
+              query={params.q?.trim() ?? ""}
+              radius={radius}
+              similarListings={similarListings}
+            />
+          ) : (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+              <div className="text-5xl">📦</div>
+              <h3 className="mt-4 text-xl font-bold">Nie ma jeszcze ogłoszeń</h3>
+              <p className="mt-2 text-slate-600">Dodaj pierwsze ogłoszenie i pokaż sąsiadom, co oferujesz.</p>
+              <Link href="/dodaj" className="mt-6 inline-flex rounded-full bg-green-700 px-6 py-3 font-semibold text-white hover:bg-green-800">Dodaj ogłoszenie</Link>
+            </div>
+          )
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {listings.map((listing) => (

@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
         "/reset-hasla",
         "/u/",
         "/wiadomosci/",
+        "/zapotrzebowania/dodaj",
         "/sprawdz-email",
         "/email-potwierdzony",
       ],

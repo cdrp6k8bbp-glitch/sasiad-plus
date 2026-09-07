@@ -18,6 +18,7 @@ import {
   readListingAvailability,
 } from "@/lib/listing-availability";
 import { canonicalizeLocation } from "@/lib/locations";
+import { notifyMatchingSearchAlerts } from "@/lib/search-alerts";
 
 function readRequiredText(formData: FormData, field: string): string {
   const value = formData.get(field);
@@ -45,6 +46,7 @@ function readImageKeys(formData: FormData): string[] {
   if (!value) return [];
 
   let imageKeys: unknown;
+
   try {
     imageKeys = JSON.parse(value);
   } catch {
@@ -81,6 +83,7 @@ export async function addListing(formData: FormData): Promise<void> {
   const description = readOptionalText(formData, "description") ?? "";
   const imageKeys = readImageKeys(formData);
   const imageKey = imageKeys[0] ?? null;
+  let listingId: number | null = null;
   const availability = readListingAvailability(formData);
 
   if (!isCategoryKey(category)) {
@@ -113,7 +116,7 @@ export async function addListing(formData: FormData): Promise<void> {
   try {
     await enforceRateLimits(env.DB, session.user.id, RATE_LIMITS.listing);
 
-    await env.DB.prepare(
+    const insertResult = await env.DB.prepare(
       `INSERT INTO listings (
         title,
         category,
@@ -155,6 +158,8 @@ export async function addListing(formData: FormData): Promise<void> {
         availability.endTime,
       )
       .run();
+    const insertedId = Number(insertResult.meta.last_row_id);
+    listingId = Number.isInteger(insertedId) && insertedId > 0 ? insertedId : null;
   } catch (error) {
     if (imageKeys.length > 0) {
       await Promise.all(
@@ -167,11 +172,28 @@ export async function addListing(formData: FormData): Promise<void> {
     throw error;
   }
 
+  if (listingId) {
+    try {
+      await notifyMatchingSearchAlerts(env.DB, {
+        id: listingId,
+        title,
+        description,
+        subcategory,
+        category,
+        location,
+        ownerId: session.user.id,
+      });
+    } catch (error) {
+      console.error("Nie udało się wysłać alertów wyszukiwania.", error);
+    }
+  }
+
   revalidatePath("/");
   revalidatePath("/sprzet");
   revalidatePath("/uslugi");
   revalidatePath("/rozwoj-osobisty");
   revalidatePath("/profil");
+  revalidatePath("/zapotrzebowania");
 
   redirect("/?dodano=1");
 }

@@ -45,6 +45,11 @@ const publicPages: MetadataRoute.Sitemap = [
     changeFrequency: "weekly",
     priority: 0.7,
   },
+  {
+    url: absoluteUrl("/zapotrzebowania"),
+    changeFrequency: "daily",
+    priority: 0.65,
+  },
   ...GUIDES.map((guide) => ({
     url: absoluteUrl(`/poradniki/${guide.slug}`),
     lastModified: new Date(guide.updatedAt),

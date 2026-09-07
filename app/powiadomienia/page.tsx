@@ -17,6 +17,7 @@ const icons = {
   moderation_update: "🛡️",
   listing_freshness_reminder: "⏳",
   listing_archived: "📦",
+  search_match: "🔎",
 };
 
 function formatDate(value: string): string {

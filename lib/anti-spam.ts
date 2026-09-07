@@ -73,6 +73,22 @@ export const RATE_LIMITS = {
         "Osiągnięto dzienny limit ogłoszeń. Spróbuj ponownie jutro.",
     },
   ],
+  searchAlert: [
+    {
+      action: "search-alert:day",
+      limit: 20,
+      windowSeconds: 24 * 60 * 60,
+      message: "Osiągnięto dzienny limit alertów wyszukiwania.",
+    },
+  ],
+  demand: [
+    {
+      action: "demand:day",
+      limit: 5,
+      windowSeconds: 24 * 60 * 60,
+      message: "Osiągnięto dzienny limit zapotrzebowań.",
+    },
+  ],
   reservation: [
     {
       action: "reservation:hour",
