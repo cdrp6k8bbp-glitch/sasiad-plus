@@ -257,6 +257,10 @@ export default async function PublicProfilePage({
                   price={listing.price}
                   ownerId={listing.owner_id}
                   ownerName={listing.owner_name}
+                  ownerCreatedAt={listing.owner_created_at}
+                  ownerRating={listing.owner_rating}
+                  ownerReviewCount={listing.owner_review_count}
+                  ownerCompletedCount={listing.owner_completed_count}
                   isFavorite={favoriteIds.has(listing.id)}
                   isReserved={Boolean(listing.is_reserved)}
                   availabilityState={listingAvailabilityStateFromRecord(listing)}

@@ -221,6 +221,10 @@ export default async function ProfilPage({
                     price={listing.price}
                     ownerName={listing.owner_name}
                     ownerId={listing.owner_id}
+                    ownerCreatedAt={listing.owner_created_at}
+                    ownerRating={listing.owner_rating}
+                    ownerReviewCount={listing.owner_review_count}
+                    ownerCompletedCount={listing.owner_completed_count}
                     showFavorite={false}
                     isReserved={Boolean(listing.is_reserved)}
                     isArchived={Boolean(listing.archived_at)}
@@ -283,6 +287,10 @@ export default async function ProfilPage({
                   price={listing.price}
                   ownerName={listing.owner_name}
                   ownerId={listing.owner_id}
+                  ownerCreatedAt={listing.owner_created_at}
+                  ownerRating={listing.owner_rating}
+                  ownerReviewCount={listing.owner_review_count}
+                  ownerCompletedCount={listing.owner_completed_count}
                   isFavorite
                   isReserved={Boolean(listing.is_reserved)}
                   availabilityState={listingAvailabilityStateFromRecord(listing)}

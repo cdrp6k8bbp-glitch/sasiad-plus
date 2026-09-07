@@ -13,6 +13,10 @@ export type Listing = {
   image_keys: string | null;
   owner_id: string | null;
   owner_name: string | null;
+  owner_created_at: string | number | null;
+  owner_rating: number | null;
+  owner_review_count: number;
+  owner_completed_count: number;
   is_reserved: number;
   availability_mode: string;
   availability_note: string | null;
@@ -58,12 +62,34 @@ const LISTING_COLUMNS = `
       AND reservations.completed_at IS NULL
       AND reservations.end_date >= date('now')
   ) AS is_reserved,
-  "user".name AS owner_name
+  "user".name AS owner_name,
+  "user"."createdAt" AS owner_created_at,
+  owner_reviews.average_rating AS owner_rating,
+  COALESCE(owner_reviews.review_count, 0) AS owner_review_count,
+  COALESCE(owner_activity.completed_count, 0) AS owner_completed_count
 `;
 
 const LISTING_SOURCE = `
   FROM listings
   LEFT JOIN "user" ON "user".id = listings.owner_id
+  LEFT JOIN (
+    SELECT reviewed_id, AVG(rating) AS average_rating, COUNT(*) AS review_count
+    FROM reviews
+    GROUP BY reviewed_id
+  ) AS owner_reviews ON owner_reviews.reviewed_id = listings.owner_id
+  LEFT JOIN (
+    SELECT participant_id, COUNT(*) AS completed_count
+    FROM (
+      SELECT owner_id AS participant_id
+      FROM reservations
+      WHERE status = 'accepted' AND completed_at IS NOT NULL
+      UNION ALL
+      SELECT requester_id AS participant_id
+      FROM reservations
+      WHERE status = 'accepted' AND completed_at IS NOT NULL
+    ) AS completed_participants
+    GROUP BY participant_id
+  ) AS owner_activity ON owner_activity.participant_id = listings.owner_id
 `;
 
 export async function getListings(

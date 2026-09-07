@@ -14,6 +14,10 @@ type ListingProps = {
   subcategory?: string | null;
   ownerName?: string | null;
   ownerId?: string | null;
+  ownerCreatedAt?: string | number | null;
+  ownerRating?: number | null;
+  ownerReviewCount?: number;
+  ownerCompletedCount?: number;
   isFavorite?: boolean;
   showFavorite?: boolean;
   isReserved?: boolean;
@@ -38,6 +42,10 @@ export default function ListingCard({
   subcategory,
   ownerName,
   ownerId,
+  ownerCreatedAt,
+  ownerRating,
+  ownerReviewCount = 0,
+  ownerCompletedCount = 0,
   isFavorite = false,
   showFavorite = true,
   isReserved = false,
@@ -113,7 +121,15 @@ export default function ListingCard({
           </Link>
         </div>
 
-        <OwnerSummary compact ownerId={ownerId} ownerName={ownerName} />
+        <OwnerSummary
+          compact
+          ownerId={ownerId}
+          ownerName={ownerName}
+          memberSince={ownerCreatedAt}
+          rating={ownerRating}
+          reviewCount={ownerReviewCount}
+          completedCount={ownerCompletedCount}
+        />
       </div>
     </article>
   );

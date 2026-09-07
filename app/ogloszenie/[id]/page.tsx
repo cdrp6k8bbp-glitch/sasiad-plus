@@ -22,7 +22,6 @@ import {
   getAcceptedReservationSlotsForListing,
   getActiveReservationsForListingAndUser,
 } from "@/lib/reservations";
-import { getReviewSummary } from "@/lib/reviews";
 import { reportListing } from "@/app/zgloszenia/actions";
 import { getUserBlockState } from "@/lib/user-blocks";
 import {
@@ -253,9 +252,6 @@ export default async function ListingPage({
           },
     ],
   };
-  const ownerReviewSummary = listing.owner_id
-    ? await getReviewSummary(listing.owner_id)
-    : null;
   const blockState =
     session && listing.owner_id && !isOwner
       ? await getUserBlockState(session.user.id, listing.owner_id)
@@ -609,10 +605,23 @@ export default async function ListingPage({
                 <OwnerSummary
                   ownerId={listing.owner_id}
                   ownerName={listing.owner_name}
-                  rating={ownerReviewSummary?.average}
-                  reviewCount={ownerReviewSummary?.count}
+                  memberSince={listing.owner_created_at}
+                  rating={listing.owner_rating}
+                  reviewCount={listing.owner_review_count}
+                  completedCount={listing.owner_completed_count}
                 />
               </div>
+
+              {!isOwner && !isArchived && (
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
+                  <p className="font-black">🛡️ Bezpieczne ustalenia</p>
+                  <ul className="mt-2 space-y-2 text-blue-900">
+                    <li>• Sprawdź profil, opinie i historię zakończonych wymian.</li>
+                    <li>• Ustal termin, cenę i sposób przekazania w wiadomościach Sąsiad+.</li>
+                    <li>• Nie wysyłaj przedpłaty osobie, której nie znasz.</li>
+                  </ul>
+                </div>
+              )}
 
               {!isOwner && !isArchived && (
                 <div className="mt-6 border-t border-slate-200 pt-6">
@@ -729,6 +738,10 @@ export default async function ListingPage({
                   price={item.price}
                   ownerName={item.owner_name}
                   ownerId={item.owner_id}
+                  ownerCreatedAt={item.owner_created_at}
+                  ownerRating={item.owner_rating}
+                  ownerReviewCount={item.owner_review_count}
+                  ownerCompletedCount={item.owner_completed_count}
                   isFavorite={favoriteIds.has(item.id)}
                   isReserved={Boolean(item.is_reserved)}
                   availabilityState={listingAvailabilityStateFromRecord(item)}

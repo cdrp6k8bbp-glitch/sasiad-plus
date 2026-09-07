@@ -6,6 +6,8 @@ type OwnerSummaryProps = {
   ownerName?: string | null;
   rating?: number | null;
   reviewCount?: number;
+  completedCount?: number;
+  memberSince?: string | number | Date | null;
 };
 
 function initials(name: string): string {
@@ -17,12 +19,41 @@ function initials(name: string): string {
     .join("");
 }
 
+function trustLabel(
+  completedCount: number,
+  reviewCount: number,
+  rating?: number | null,
+): string {
+  if (completedCount >= 10 && reviewCount >= 5 && (rating ?? 0) >= 4.7) {
+    return "🏅 Ambasador Sąsiedztwa";
+  }
+  if (completedCount >= 5 && reviewCount >= 3 && (rating ?? 0) >= 4.5) {
+    return "💚 Zaufany Sąsiad";
+  }
+  if (completedCount >= 1) return "✓ Zweryfikowany Sąsiad";
+  return "🟢 Nowy Sąsiad";
+}
+
+function completedLabel(count: number): string {
+  if (count === 1) return "1 zakończona wymiana";
+  if (count > 1 && count < 5) return `${count} zakończone wymiany`;
+  return `${count} zakończonych wymian`;
+}
+
+function memberSinceYear(value?: string | number | Date | null): number | string {
+  if (value === null || value === undefined || value === "") return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.getFullYear();
+}
+
 export default function OwnerSummary({
   compact = false,
   ownerId,
   ownerName,
   rating,
   reviewCount = 0,
+  completedCount = 0,
+  memberSince,
 }: OwnerSummaryProps) {
   const displayName = ownerName ?? "Ogłoszenie społeczności";
   const ownerInitials = ownerName ? initials(ownerName) : "S+";
@@ -49,8 +80,22 @@ export default function OwnerSummary({
               </p>
             )}
             <p className="truncate text-xs font-semibold text-emerald-700">
-              {ownerName ? "🟢 Nowy Sąsiad" : "Starsze ogłoszenie"}
+              {ownerName
+                ? trustLabel(completedCount, reviewCount, rating)
+                : "Starsze ogłoszenie"}
             </p>
+            {ownerName && (reviewCount > 0 || completedCount > 0) && (
+              <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                {rating !== null && rating !== undefined && reviewCount > 0
+                  ? `⭐ ${rating.toFixed(1)} (${reviewCount})`
+                  : completedLabel(completedCount)}
+                {rating !== null && rating !== undefined &&
+                  reviewCount > 0 &&
+                  completedCount > 0
+                  ? ` · ${completedLabel(completedCount)}`
+                  : ""}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -78,7 +123,9 @@ export default function OwnerSummary({
             <p className="text-lg font-black text-slate-900">{displayName}</p>
           )}
           <p className="mt-1 text-sm font-bold text-emerald-700">
-            {ownerName ? "🟢 Nowy Sąsiad" : "Starsze ogłoszenie"}
+            {ownerName
+              ? trustLabel(completedCount, reviewCount, rating)
+              : "Starsze ogłoszenie"}
           </p>
         </div>
       </div>
@@ -86,7 +133,7 @@ export default function OwnerSummary({
       <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-2xl bg-slate-50 p-3">
           <dt className="text-slate-500">Sąsiad od</dt>
-          <dd className="mt-1 font-bold">2026</dd>
+          <dd className="mt-1 font-bold">{memberSinceYear(memberSince)}</dd>
         </div>
 
         <div className="rounded-2xl bg-slate-50 p-3">
@@ -101,7 +148,11 @@ export default function OwnerSummary({
         <div className="col-span-2 rounded-2xl bg-green-50 p-3 text-green-900">
           <dt className="text-green-700">Historia</dt>
           <dd className="mt-1 font-bold">
-            {ownerName ? "Nowe konto" : "Ogłoszenie sprzed kont użytkowników"}
+            {ownerName
+              ? completedCount > 0
+                ? completedLabel(completedCount)
+                : "Brak zakończonych wymian"
+              : "Ogłoszenie sprzed kont użytkowników"}
           </dd>
         </div>
       </dl>
