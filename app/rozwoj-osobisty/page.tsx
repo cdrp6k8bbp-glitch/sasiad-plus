@@ -14,6 +14,7 @@ export default function RozwojOsobisty({
   searchParams: Promise<{
     q?: string | string[];
     location?: string | string[];
+    radius?: string | string[];
   }>;
 }) {
   return (

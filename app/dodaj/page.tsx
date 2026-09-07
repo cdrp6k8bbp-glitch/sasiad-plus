@@ -1,6 +1,7 @@
 import CategoryFields from "@/components/CategoryFields";
 import ImageUploader from "@/components/ImageUploader";
 import ListingAvailabilityFields from "@/components/ListingAvailabilityFields";
+import LocationSearchField from "@/components/LocationSearchField";
 import { auth } from "@/lib/auth";
 import { todayIsoInPoland } from "@/lib/listing-availability";
 import { headers } from "next/headers";
@@ -89,21 +90,12 @@ export default async function Dodaj() {
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="location"
-              className="mb-2 block text-sm font-bold text-slate-700"
-            >
-              Miasto
-            </label>
-            <input
+          <LocationSearchField
               id="location"
-              name="location"
               required
-              className={fieldClassName}
-              placeholder="Np. Gdańsk"
+              labelClassName="mb-2 block text-sm font-bold text-slate-700"
+              inputClassName={fieldClassName}
             />
-          </div>
 
           <button
             type="submit"

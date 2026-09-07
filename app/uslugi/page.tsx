@@ -14,6 +14,7 @@ export default function Uslugi({
   searchParams: Promise<{
     q?: string | string[];
     location?: string | string[];
+    radius?: string | string[];
   }>;
 }) {
   return (

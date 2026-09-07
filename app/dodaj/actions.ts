@@ -17,6 +17,7 @@ import {
   availabilityWeekdaysValue,
   readListingAvailability,
 } from "@/lib/listing-availability";
+import { canonicalizeLocation } from "@/lib/locations";
 
 function readRequiredText(formData: FormData, field: string): string {
   const value = formData.get(field);
@@ -75,7 +76,7 @@ export async function addListing(formData: FormData): Promise<void> {
   const category = readRequiredText(formData, "category");
   const subcategory = readRequiredText(formData, "subcategory");
   const price = readRequiredText(formData, "price");
-  const location = readRequiredText(formData, "location");
+  const location = canonicalizeLocation(readRequiredText(formData, "location"));
 
   const description = readOptionalText(formData, "description") ?? "";
   const imageKeys = readImageKeys(formData);

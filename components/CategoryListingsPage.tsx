@@ -2,9 +2,11 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
+import LocationSearchField from "@/components/LocationSearchField";
 import { auth } from "@/lib/auth";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
 import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
+import { matchesLocationSearch, parseSearchRadius } from "@/lib/locations";
 
 type CategoryListingsPageProps = {
   categories: string | string[];
@@ -14,6 +16,7 @@ type CategoryListingsPageProps = {
   searchParams: Promise<{
     q?: string | string[];
     location?: string | string[];
+    radius?: string | string[];
   }>;
   seoContent?: {
     heading: string;
@@ -44,8 +47,8 @@ export default async function CategoryListingsPage({
   const queryValue = firstValue(params.q).trim();
   const locationValue = firstValue(params.location).trim();
   const query = queryValue.toLocaleLowerCase("pl");
-  const location = locationValue.toLocaleLowerCase("pl");
-  const isSearching = Boolean(query || location);
+  const radius = parseSearchRadius(params.radius);
+  const isSearching = Boolean(query || locationValue);
 
   const [allListings, session] = await Promise.all([
     getListings(categories, 100),
@@ -65,7 +68,7 @@ export default async function CategoryListingsPage({
 
     return (
       (!query || searchableText.includes(query)) &&
-      (!location || listing.location.toLocaleLowerCase("pl").includes(location))
+      matchesLocationSearch(listing.location, locationValue, radius)
     );
   });
 
@@ -151,7 +154,7 @@ export default async function CategoryListingsPage({
           <form
             action={pathname}
             method="GET"
-            className="mt-8 grid gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-green-900/5 sm:grid-cols-[1fr_220px_auto]"
+            className="mt-8 grid items-start gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-green-900/5 sm:grid-cols-[1fr_290px_auto]"
           >
             <label className="sr-only" htmlFor={`${pathname}-q`}>
               Czego szukasz?
@@ -165,15 +168,12 @@ export default async function CategoryListingsPage({
               className="min-w-0 rounded-2xl border border-slate-200 px-4 py-4 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100"
             />
 
-            <label className="sr-only" htmlFor={`${pathname}-location`}>
-              Miasto
-            </label>
-            <input
+            <LocationSearchField
               id={`${pathname}-location`}
-              name="location"
               defaultValue={locationValue}
-              placeholder="Miasto"
-              className="min-w-0 rounded-2xl border border-slate-200 px-4 py-4 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100"
+              defaultRadius={params.radius}
+              showRadius
+              inputClassName="w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-4 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100"
             />
 
             <button
@@ -195,6 +195,9 @@ export default async function CategoryListingsPage({
             <h2 className="mt-1 text-3xl font-black tracking-tight">
               {isSearching ? `Znaleziono: ${listings.length}` : `Ogłoszenia: ${listings.length}`}
             </h2>
+            {isSearching && locationValue && (
+              <p className="mt-2 text-slate-500">Do {radius} km od {locationValue}</p>
+            )}
           </div>
 
           {isSearching && (

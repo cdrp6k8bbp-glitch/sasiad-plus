@@ -120,6 +120,7 @@ type CategoryPageProps = {
   searchParams: Promise<{
     q?: string | string[];
     location?: string | string[];
+    radius?: string | string[];
   }>;
 };
 

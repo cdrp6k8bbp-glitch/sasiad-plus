@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import AuthNav from "@/components/AuthNav";
 import ListingCard from "@/components/ListingCard";
+import LocationSearchField from "@/components/LocationSearchField";
 import { auth } from "@/lib/auth";
 import { CATEGORIES, isCategoryKey } from "@/lib/categories";
 import { getFavoriteListingIds, getListings } from "@/lib/db";
 import { GUIDES } from "@/lib/guides";
 import { listingAvailabilityStateFromRecord } from "@/lib/listing-availability";
+import { matchesLocationSearch, parseSearchRadius } from "@/lib/locations";
 
 export const metadata: Metadata = {
   title: {
@@ -102,12 +104,14 @@ export default async function Home({
     konto?: string;
     q?: string;
     location?: string;
+    radius?: string;
   }>;
 }) {
   const params = await searchParams;
   const q = params.q?.trim().toLowerCase() ?? "";
-  const location = params.location?.trim().toLowerCase() ?? "";
-  const isSearching = Boolean(q || location);
+  const locationValue = params.location?.trim() ?? "";
+  const radius = parseSearchRadius(params.radius);
+  const isSearching = Boolean(q || locationValue);
 
   const [allListings, session] = await Promise.all([
     getListings(undefined, isSearching ? 100 : 6),
@@ -129,12 +133,15 @@ export default async function Home({
         listing.category.toLowerCase().includes(q) ||
         categoryLabel.toLowerCase().includes(q);
 
-      const matchesLocation =
-        !location || listing.location.toLowerCase().includes(location);
+      const matchesLocation = matchesLocationSearch(
+        listing.location,
+        locationValue,
+        radius,
+      );
 
       return matchesQuery && matchesLocation;
     })
-    .slice(0, q || location ? 100 : 6);
+    .slice(0, q || locationValue ? 100 : 6);
 
   return (
     <main className="min-h-screen bg-[#f7faf8] pb-24 text-slate-900 md:pb-0">
@@ -227,7 +234,7 @@ export default async function Home({
             <form
               action="/"
               method="GET"
-              className="mt-8 grid gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/60 sm:grid-cols-[1fr_180px_auto]"
+              className="mt-8 grid items-start gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/60 sm:grid-cols-[1fr_290px_auto]"
             >
               <label className="sr-only" htmlFor="q">
                 Czego szukasz?
@@ -242,16 +249,12 @@ export default async function Home({
                 className="min-w-0 rounded-2xl border border-slate-200 px-4 py-4 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100"
               />
 
-              <label className="sr-only" htmlFor="location">
-                Miasto
-              </label>
-
-              <input
+              <LocationSearchField
                 id="location"
-                name="location"
-                defaultValue={params.location ?? ""}
-                placeholder="Miasto"
-                className="min-w-0 rounded-2xl border border-slate-200 px-4 py-4 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100"
+                defaultValue={locationValue}
+                defaultRadius={params.radius}
+                showRadius
+                inputClassName="w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-4 outline-none transition focus:border-green-600 focus:ring-4 focus:ring-green-100"
               />
 
               <button
@@ -409,6 +412,7 @@ export default async function Home({
             {isSearching && (
               <p className="mt-2 text-slate-500">
                 Znaleziono: {listings.length}
+                {locationValue ? ` · do ${radius} km od ${locationValue}` : ""}
               </p>
             )}
           </div>

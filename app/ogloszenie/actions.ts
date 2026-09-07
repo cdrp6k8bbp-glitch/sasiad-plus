@@ -17,6 +17,7 @@ import {
   availabilityWeekdaysValue,
   readListingAvailability,
 } from "@/lib/listing-availability";
+import { canonicalizeLocation } from "@/lib/locations";
 
 type CurrentListing = {
   owner_id: string | null;
@@ -96,7 +97,7 @@ export async function updateListing(
   const category = requiredText(formData, "category");
   const subcategory = requiredText(formData, "subcategory");
   const price = requiredText(formData, "price");
-  const location = requiredText(formData, "location");
+  const location = canonicalizeLocation(requiredText(formData, "location"));
   const description = optionalText(formData, "description") ?? "";
   const imageKeys = imageKeysFromForm(formData);
   const availability = readListingAvailability(formData);
